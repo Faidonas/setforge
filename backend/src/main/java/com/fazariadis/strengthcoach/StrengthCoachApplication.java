@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class StrengthcoachApplication {
+public class StrengthCoachApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(StrengthcoachApplication.class, args);
+		SpringApplication.run(StrengthCoachApplication.class, args);
 	}
 
 }

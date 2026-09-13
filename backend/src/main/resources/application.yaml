@@ -1,3 +1,19 @@
 spring:
   application:
     name: strengthcoach
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/setforge_db}
+    username: ${DB_USERNAME:setforge_app}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
