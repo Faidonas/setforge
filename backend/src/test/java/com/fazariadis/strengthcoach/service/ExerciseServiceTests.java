@@ -22,22 +22,31 @@ class ExerciseServiceTests {
 	void returnsMappedExercisesFromNameOrderedQuery() {
 		Exercise benchPress = mock(Exercise.class);
 		Exercise squat = mock(Exercise.class);
-		ExerciseResponse benchPressResponse =
-				new ExerciseResponse(1L, "Bench Press", "Chest", "Barbell", "Press the bar.");
-		ExerciseResponse squatResponse =
-				new ExerciseResponse(2L, "Squat", "Quadriceps", "Barbell", null);
+		ExerciseResponse benchPressResponse = ExerciseResponse.builder()
+				.id(1L)
+				.name("Bench Press")
+				.primaryMuscle("Chest")
+				.equipment("Barbell")
+				.instructions("Press the bar.")
+				.build();
+		ExerciseResponse squatResponse = ExerciseResponse.builder()
+				.id(2L)
+				.name("Squat")
+				.primaryMuscle("Quadriceps")
+				.equipment("Barbell")
+				.build();
 
 		when(exerciseRepository.findAllByOrderByNameAsc()).thenReturn(List.of(benchPress, squat));
-		when(benchPress.getId()).thenReturn(benchPressResponse.id());
-		when(benchPress.getName()).thenReturn(benchPressResponse.name());
-		when(benchPress.getPrimaryMuscle()).thenReturn(benchPressResponse.primaryMuscle());
-		when(benchPress.getEquipment()).thenReturn(benchPressResponse.equipment());
-		when(benchPress.getInstructions()).thenReturn(benchPressResponse.instructions());
-		when(squat.getId()).thenReturn(squatResponse.id());
-		when(squat.getName()).thenReturn(squatResponse.name());
-		when(squat.getPrimaryMuscle()).thenReturn(squatResponse.primaryMuscle());
-		when(squat.getEquipment()).thenReturn(squatResponse.equipment());
-		when(squat.getInstructions()).thenReturn(squatResponse.instructions());
+		when(benchPress.getId()).thenReturn(benchPressResponse.getId());
+		when(benchPress.getName()).thenReturn(benchPressResponse.getName());
+		when(benchPress.getPrimaryMuscle()).thenReturn(benchPressResponse.getPrimaryMuscle());
+		when(benchPress.getEquipment()).thenReturn(benchPressResponse.getEquipment());
+		when(benchPress.getInstructions()).thenReturn(benchPressResponse.getInstructions());
+		when(squat.getId()).thenReturn(squatResponse.getId());
+		when(squat.getName()).thenReturn(squatResponse.getName());
+		when(squat.getPrimaryMuscle()).thenReturn(squatResponse.getPrimaryMuscle());
+		when(squat.getEquipment()).thenReturn(squatResponse.getEquipment());
+		when(squat.getInstructions()).thenReturn(squatResponse.getInstructions());
 
 		List<ExerciseResponse> result = exerciseService.getAllExercises();
 

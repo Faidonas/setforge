@@ -8,11 +8,12 @@ import org.springframework.stereotype.Component;
 public class ExerciseMapper {
 
 	public ExerciseResponse toResponse(Exercise exercise) {
-		return new ExerciseResponse(
-				exercise.getId(),
-				exercise.getName(),
-				exercise.getPrimaryMuscle(),
-				exercise.getEquipment(),
-				exercise.getInstructions());
+		return ExerciseResponse.builder()
+				.id(exercise.getId())
+				.name(exercise.getName())
+				.primaryMuscle(exercise.getPrimaryMuscle())
+				.equipment(exercise.getEquipment())
+				.instructions(exercise.getInstructions())
+				.build();
 	}
 }

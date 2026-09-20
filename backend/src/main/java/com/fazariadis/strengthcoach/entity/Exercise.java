@@ -6,9 +6,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "exercises")
+@Data
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Exercise {
 
 	@Id
@@ -26,27 +35,4 @@ public class Exercise {
 
 	@Column(columnDefinition = "TEXT")
 	private String instructions;
-
-	protected Exercise() {
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public String getPrimaryMuscle() {
-		return primaryMuscle;
-	}
-
-	public String getEquipment() {
-		return equipment;
-	}
-
-	public String getInstructions() {
-		return instructions;
-	}
 }

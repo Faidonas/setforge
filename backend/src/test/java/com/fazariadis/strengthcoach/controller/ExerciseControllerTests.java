@@ -24,7 +24,13 @@ class ExerciseControllerTests {
 	@Test
 	void getExercisesReturnsResponseDtos() throws Exception {
 		when(exerciseService.getAllExercises()).thenReturn(List.of(
-				new ExerciseResponse(1L, "Bench Press", "Chest", "Barbell", "Press the bar.")));
+				ExerciseResponse.builder()
+						.id(1L)
+						.name("Bench Press")
+						.primaryMuscle("Chest")
+						.equipment("Barbell")
+						.instructions("Press the bar.")
+						.build()));
 
 		mockMvc.perform(get("/api/exercises"))
 				.andExpect(status().isOk())
