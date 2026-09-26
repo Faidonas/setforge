@@ -1,5 +1,6 @@
 package com.fazariadis.strengthcoach.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fazariadis.strengthcoach.entity.enums.SetType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
@@ -8,7 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Schema(description = "A planned set in a workout template")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 @Builder
 @NoArgsConstructor

@@ -12,7 +12,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fazariadis.strengthcoach.dto.CreateWorkoutTemplateRequest;
+import com.fazariadis.strengthcoach.dto.WorkoutTemplateExerciseResponse;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
+import com.fazariadis.strengthcoach.dto.WorkoutTemplateSetResponse;
+import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
+import com.fazariadis.strengthcoach.entity.enums.SetType;
 import com.fazariadis.strengthcoach.exception.ApiExceptionHandler;
 import com.fazariadis.strengthcoach.service.WorkoutTemplateService;
 import java.util.List;
@@ -84,6 +88,48 @@ class WorkoutTemplateControllerTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(12))
 				.andExpect(jsonPath("$[0].name").value("Upper Body"));
+	}
+
+	@Test
+	void omitsTargetsThatDoNotApplyToExerciseType() throws Exception {
+		WorkoutTemplateSetResponse weightSet = WorkoutTemplateSetResponse.builder()
+				.id(201L)
+				.position(0)
+				.setType(SetType.NORMAL)
+				.targetReps(8)
+				.targetWeight(new java.math.BigDecimal("60.00"))
+				.restSeconds(90)
+				.build();
+		WorkoutTemplateSetResponse timedSet = WorkoutTemplateSetResponse.builder()
+				.id(202L)
+				.position(0)
+				.setType(SetType.NORMAL)
+				.targetTimeSeconds(45)
+				.restSeconds(30)
+				.build();
+		when(workoutTemplateService.getById(12L)).thenReturn(WorkoutTemplateResponse.builder()
+				.id(12L)
+				.ownerId(1L)
+				.name("Full Body")
+				.exercises(List.of(
+						WorkoutTemplateExerciseResponse.builder()
+								.exerciseType(ExerciseType.WEIGHT_AND_REPS)
+								.sets(List.of(weightSet))
+								.build(),
+						WorkoutTemplateExerciseResponse.builder()
+								.exerciseType(ExerciseType.TIMED)
+								.sets(List.of(timedSet))
+								.build()))
+				.build());
+
+		mockMvc.perform(get("/api/workout-templates/12"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.exercises[0].sets[0].targetReps").value(8))
+				.andExpect(jsonPath("$.exercises[0].sets[0].targetWeight").value(60.0))
+				.andExpect(jsonPath("$.exercises[0].sets[0].targetTimeSeconds").doesNotExist())
+				.andExpect(jsonPath("$.exercises[1].sets[0].targetTimeSeconds").value(45))
+				.andExpect(jsonPath("$.exercises[1].sets[0].targetReps").doesNotExist())
+				.andExpect(jsonPath("$.exercises[1].sets[0].targetWeight").doesNotExist());
 	}
 
 	@Test
