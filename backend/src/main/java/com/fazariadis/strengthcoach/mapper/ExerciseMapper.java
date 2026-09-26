@@ -13,6 +13,7 @@ public class ExerciseMapper {
 				.name(exercise.getName())
 				.primaryMuscle(exercise.getPrimaryMuscle())
 				.equipment(exercise.getEquipment())
+				.exerciseType(exercise.getExerciseType())
 				.instructions(exercise.getInstructions())
 				.build();
 	}

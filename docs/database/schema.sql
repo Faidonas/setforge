@@ -4,7 +4,10 @@ CREATE TABLE IF NOT EXISTS exercises
     name           VARCHAR(100) NOT NULL,
     primary_muscle VARCHAR(50)  NOT NULL,
     equipment      VARCHAR(50)  NOT NULL,
-    instructions   TEXT
+    exercise_type  VARCHAR(30)  NOT NULL DEFAULT 'WEIGHT_AND_REPS',
+    instructions   TEXT,
+    CONSTRAINT ck_exercises_type
+        CHECK (exercise_type IN ('WEIGHT_AND_REPS', 'TIMED'))
 );
 
 CREATE TABLE IF NOT EXISTS users
@@ -93,7 +96,8 @@ CREATE TABLE IF NOT EXISTS workout_template_sets
     set_type                VARCHAR(20)    NOT NULL DEFAULT 'NORMAL',
     target_reps             INTEGER,
     target_weight           NUMERIC(8, 2),
-    target_duration_seconds INTEGER,
+    target_time_seconds     INTEGER,
+    rest_seconds            INTEGER,
     CONSTRAINT fk_workout_template_sets_template_exercise
         FOREIGN KEY (template_exercise_id) REFERENCES workout_template_exercises (id)
             ON DELETE CASCADE,
@@ -107,8 +111,10 @@ CREATE TABLE IF NOT EXISTS workout_template_sets
         CHECK (target_reps IS NULL OR target_reps >= 0),
     CONSTRAINT ck_workout_template_sets_target_weight
         CHECK (target_weight IS NULL OR target_weight >= 0),
-    CONSTRAINT ck_workout_template_sets_target_duration
-        CHECK (target_duration_seconds IS NULL OR target_duration_seconds >= 0)
+    CONSTRAINT ck_workout_template_sets_target_time
+        CHECK (target_time_seconds IS NULL OR target_time_seconds > 0),
+    CONSTRAINT ck_workout_template_sets_rest
+        CHECK (rest_seconds IS NULL OR rest_seconds >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS workout_sessions
@@ -180,10 +186,11 @@ CREATE TABLE IF NOT EXISTS workout_sets
     set_type                VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
     target_reps             INTEGER,
     target_weight           NUMERIC(8, 2),
-    target_duration_seconds INTEGER,
+    target_time_seconds     INTEGER,
+    rest_seconds            INTEGER,
     reps                    INTEGER,
     weight                  NUMERIC(8, 2),
-    duration_seconds        INTEGER,
+    time_seconds            INTEGER,
     distance_meters         NUMERIC(10, 2),
     completed               BOOLEAN     NOT NULL DEFAULT FALSE,
     completed_at            TIMESTAMPTZ,
@@ -203,14 +210,16 @@ CREATE TABLE IF NOT EXISTS workout_sets
         CHECK (target_reps IS NULL OR target_reps >= 0),
     CONSTRAINT ck_workout_sets_target_weight
         CHECK (target_weight IS NULL OR target_weight >= 0),
-    CONSTRAINT ck_workout_sets_target_duration
-        CHECK (target_duration_seconds IS NULL OR target_duration_seconds >= 0),
+    CONSTRAINT ck_workout_sets_target_time
+        CHECK (target_time_seconds IS NULL OR target_time_seconds > 0),
+    CONSTRAINT ck_workout_sets_rest
+        CHECK (rest_seconds IS NULL OR rest_seconds >= 0),
     CONSTRAINT ck_workout_sets_reps
         CHECK (reps IS NULL OR reps >= 0),
     CONSTRAINT ck_workout_sets_weight
         CHECK (weight IS NULL OR weight >= 0),
-    CONSTRAINT ck_workout_sets_duration
-        CHECK (duration_seconds IS NULL OR duration_seconds >= 0),
+    CONSTRAINT ck_workout_sets_time
+        CHECK (time_seconds IS NULL OR time_seconds >= 0),
     CONSTRAINT ck_workout_sets_distance
         CHECK (distance_meters IS NULL OR distance_meters >= 0),
     CONSTRAINT ck_workout_sets_completion
@@ -219,6 +228,133 @@ CREATE TABLE IF NOT EXISTS workout_sets
             OR (completed = TRUE AND completed_at IS NOT NULL)
         )
 );
+
+-- Upgrade an existing development database. These statements are safe to rerun.
+ALTER TABLE exercises
+    ADD COLUMN IF NOT EXISTS exercise_type VARCHAR(30) NOT NULL DEFAULT 'WEIGHT_AND_REPS';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'ck_exercises_type'
+    ) THEN
+        ALTER TABLE exercises ADD CONSTRAINT ck_exercises_type
+            CHECK (exercise_type IN ('WEIGHT_AND_REPS', 'TIMED'));
+    END IF;
+END
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'workout_template_sets'
+          AND column_name = 'target_duration_seconds'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'workout_template_sets'
+          AND column_name = 'target_time_seconds'
+    ) THEN
+        ALTER TABLE workout_template_sets
+            RENAME COLUMN target_duration_seconds TO target_time_seconds;
+    END IF;
+END
+$$;
+
+ALTER TABLE workout_template_sets
+    DROP COLUMN IF EXISTS target_duration_seconds;
+ALTER TABLE workout_template_sets
+    ADD COLUMN IF NOT EXISTS rest_seconds INTEGER;
+ALTER TABLE workout_template_sets
+    DROP CONSTRAINT IF EXISTS ck_workout_template_sets_target_duration;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'ck_workout_template_sets_target_time'
+    ) THEN
+        ALTER TABLE workout_template_sets ADD CONSTRAINT ck_workout_template_sets_target_time
+            CHECK (target_time_seconds IS NULL OR target_time_seconds > 0);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'ck_workout_template_sets_rest'
+    ) THEN
+        ALTER TABLE workout_template_sets ADD CONSTRAINT ck_workout_template_sets_rest
+            CHECK (rest_seconds IS NULL OR rest_seconds >= 0);
+    END IF;
+END
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'workout_sets'
+          AND column_name = 'target_duration_seconds'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'workout_sets'
+          AND column_name = 'target_time_seconds'
+    ) THEN
+        ALTER TABLE workout_sets
+            RENAME COLUMN target_duration_seconds TO target_time_seconds;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'workout_sets'
+          AND column_name = 'duration_seconds'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'workout_sets'
+          AND column_name = 'time_seconds'
+    ) THEN
+        ALTER TABLE workout_sets
+            RENAME COLUMN duration_seconds TO time_seconds;
+    END IF;
+END
+$$;
+
+ALTER TABLE workout_sets
+    DROP COLUMN IF EXISTS target_duration_seconds;
+ALTER TABLE workout_sets
+    DROP COLUMN IF EXISTS duration_seconds;
+ALTER TABLE workout_sets
+    ADD COLUMN IF NOT EXISTS rest_seconds INTEGER;
+ALTER TABLE workout_sets
+    DROP CONSTRAINT IF EXISTS ck_workout_sets_target_duration;
+ALTER TABLE workout_sets
+    DROP CONSTRAINT IF EXISTS ck_workout_sets_duration;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'ck_workout_sets_target_time'
+    ) THEN
+        ALTER TABLE workout_sets ADD CONSTRAINT ck_workout_sets_target_time
+            CHECK (target_time_seconds IS NULL OR target_time_seconds > 0);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'ck_workout_sets_rest'
+    ) THEN
+        ALTER TABLE workout_sets ADD CONSTRAINT ck_workout_sets_rest
+            CHECK (rest_seconds IS NULL OR rest_seconds >= 0);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'ck_workout_sets_time'
+    ) THEN
+        ALTER TABLE workout_sets ADD CONSTRAINT ck_workout_sets_time
+            CHECK (time_seconds IS NULL OR time_seconds >= 0);
+    END IF;
+END
+$$;
 
 -- The application connects as setforge_app, while structural SQL is run as postgres.
 GRANT USAGE ON SCHEMA public TO setforge_app;

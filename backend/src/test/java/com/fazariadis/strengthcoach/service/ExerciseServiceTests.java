@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.fazariadis.strengthcoach.dto.ExerciseResponse;
 import com.fazariadis.strengthcoach.entity.Exercise;
+import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
 import com.fazariadis.strengthcoach.mapper.ExerciseMapper;
 import com.fazariadis.strengthcoach.repository.ExerciseRepository;
 import java.util.List;
@@ -27,6 +28,7 @@ class ExerciseServiceTests {
 				.name("Bench Press")
 				.primaryMuscle("Chest")
 				.equipment("Barbell")
+				.exerciseType(ExerciseType.WEIGHT_AND_REPS)
 				.instructions("Press the bar.")
 				.build();
 		ExerciseResponse squatResponse = ExerciseResponse.builder()
@@ -34,6 +36,7 @@ class ExerciseServiceTests {
 				.name("Squat")
 				.primaryMuscle("Quadriceps")
 				.equipment("Barbell")
+				.exerciseType(ExerciseType.WEIGHT_AND_REPS)
 				.build();
 
 		when(exerciseRepository.findAllByOrderByNameAsc()).thenReturn(List.of(benchPress, squat));
@@ -41,11 +44,13 @@ class ExerciseServiceTests {
 		when(benchPress.getName()).thenReturn(benchPressResponse.getName());
 		when(benchPress.getPrimaryMuscle()).thenReturn(benchPressResponse.getPrimaryMuscle());
 		when(benchPress.getEquipment()).thenReturn(benchPressResponse.getEquipment());
+		when(benchPress.getExerciseType()).thenReturn(benchPressResponse.getExerciseType());
 		when(benchPress.getInstructions()).thenReturn(benchPressResponse.getInstructions());
 		when(squat.getId()).thenReturn(squatResponse.getId());
 		when(squat.getName()).thenReturn(squatResponse.getName());
 		when(squat.getPrimaryMuscle()).thenReturn(squatResponse.getPrimaryMuscle());
 		when(squat.getEquipment()).thenReturn(squatResponse.getEquipment());
+		when(squat.getExerciseType()).thenReturn(squatResponse.getExerciseType());
 		when(squat.getInstructions()).thenReturn(squatResponse.getInstructions());
 
 		List<ExerciseResponse> result = exerciseService.getAllExercises();

@@ -54,6 +54,9 @@ public class WorkoutTemplateSet {
 	@Column(name = "target_weight", precision = 8, scale = 2)
 	private BigDecimal targetWeight;
 
-	@Column(name = "target_duration_seconds")
-	private Integer targetDurationSeconds;
+	@Column(name = "target_time_seconds")
+	private Integer targetTimeSeconds;
+
+	@Column(name = "rest_seconds")
+	private Integer restSeconds;
 }

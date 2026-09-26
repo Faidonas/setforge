@@ -1,5 +1,6 @@
 package com.fazariadis.strengthcoach.dto;
 
+import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,9 @@ public class ExerciseResponse {
 
 	@Schema(description = "Equipment required", example = "Barbell")
 	private String equipment;
+
+	@Schema(description = "Values recorded for this exercise", example = "WEIGHT_AND_REPS")
+	private ExerciseType exerciseType;
 
 	@Schema(description = "Instructions for performing the exercise", nullable = true)
 	private String instructions;

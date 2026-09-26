@@ -52,6 +52,7 @@ erDiagram
         varchar name
         varchar primary_muscle
         varchar equipment
+        varchar exercise_type
         text instructions
     }
 
@@ -79,7 +80,8 @@ erDiagram
         varchar set_type
         integer target_reps
         numeric target_weight
-        integer target_duration_seconds
+        integer target_time_seconds
+        integer rest_seconds
     }
 
     WORKOUT_SESSIONS {
@@ -112,10 +114,11 @@ erDiagram
         varchar set_type
         integer target_reps
         numeric target_weight
-        integer target_duration_seconds
+        integer target_time_seconds
+        integer rest_seconds
         integer reps
         numeric weight
-        integer duration_seconds
+        integer time_seconds
         numeric distance_meters
         boolean completed
         timestamptz completed_at
@@ -176,8 +179,14 @@ Database table: `exercises`
 An exercise is a reusable movement in the exercise catalogue. It describes the movement itself,
 not its placement in a routine and not a user's performance.
 
-It contains a name, primary muscle, required equipment, and optional instructions. A single
-exercise can be referenced by many workout templates.
+It contains a name, primary muscle, required equipment, tracking type, and optional instructions.
+A single exercise can be referenced by many workout templates.
+
+`exercise_type` supports:
+
+- `WEIGHT_AND_REPS`: sets may plan and record repetitions and weight.
+- `TIMED`: sets use only a timer, such as for planks and wall sits. Repetitions and weight are not
+  accepted.
 
 ### WorkoutTemplate
 
@@ -211,8 +220,9 @@ Rules:
 
 Database table: `workout_template_sets`
 
-A template set describes a planned target. It does not contain actual workout results. Targets are
-nullable so the same model can represent repetition, weight, and duration exercises.
+A template set describes a planned target and the rest after that set. It does not contain actual
+workout results. Weight-and-reps exercises use `target_reps` and `target_weight`; timed exercises
+use `target_time_seconds`.
 
 `set_type` supports:
 
@@ -224,7 +234,11 @@ nullable so the same model can represent repetition, weight, and duration exerci
 Rules:
 
 - `position` is zero-based, nonnegative, and unique within its template exercise.
-- Repetitions, weight, and duration must be nonnegative when present.
+- `target_time_seconds` is required and positive for timed exercises and is rejected for
+  weight-and-reps exercises.
+- Timed exercises reject repetition and weight targets.
+- `rest_seconds` is optional, applies to both exercise types, and must be nonnegative.
+- Repetitions and weight must be nonnegative when present.
 - Weight uses `NUMERIC(8, 2)` in PostgreSQL and `BigDecimal` in Java to avoid floating-point
   rounding errors.
 
@@ -274,15 +288,19 @@ A workout set stores both the planned target snapshot and the actual performance
 separation preserves the target shown during the workout while allowing progress and adherence to
 be calculated later.
 
-Target fields copied from a template are `target_reps`, `target_weight`, and
-`target_duration_seconds`. Actual fields are `reps`, `weight`, `duration_seconds`, and
-`distance_meters`.
+Target fields copied from a template are `target_reps`, `target_weight`, `target_time_seconds`, and
+`rest_seconds`. Actual fields are `reps`, `weight`, `time_seconds`, and `distance_meters`.
 
 Rules:
 
 - `position` is zero-based, nonnegative, and unique within the session exercise.
 - `source_template_set_id` is optional and is used only as provenance.
-- All target and actual numeric values must be nonnegative when present.
+- Timer values represent exercise work time. Rest is stored separately in `rest_seconds`.
+- All target and actual numeric values must be nonnegative when present; planned timer values must
+  be greater than zero.
+- Sets for `TIMED` exercises use `target_time_seconds` and `time_seconds`; their repetition,
+  weight, and distance fields remain null.
+- Sets for `WEIGHT_AND_REPS` exercises do not use timer fields.
 - A completed set requires `completed_at`; an incomplete set must not have it.
 - Deleting or editing the template does not change the copied target or actual values.
 
@@ -340,7 +358,7 @@ For each model change:
 6. Run structural SQL as `postgres`, then grant data access to `setforge_app`.
 7. Start the backend with `ddl-auto: validate` to confirm that JPA and PostgreSQL agree.
 
-`CREATE TABLE IF NOT EXISTS` does not modify an already existing table. Editing a `CREATE TABLE`
-section in `schema.sql` is therefore sufficient for new databases but does not migrate an existing
-database. Until a migration tool is introduced, existing databases must receive the corresponding
-manual `ALTER TABLE` command.
+`CREATE TABLE IF NOT EXISTS` does not modify an already existing table. The upgrade section near
+the end of `schema.sql` contains rerunnable `ALTER TABLE` and constraint statements for existing
+development databases. Until a migration tool is introduced, every structural change must update
+both the fresh table definition and that upgrade section.

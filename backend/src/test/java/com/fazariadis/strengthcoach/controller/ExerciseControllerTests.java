@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fazariadis.strengthcoach.dto.ExerciseResponse;
+import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
 import com.fazariadis.strengthcoach.service.ExerciseService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class ExerciseControllerTests {
 						.name("Bench Press")
 						.primaryMuscle("Chest")
 						.equipment("Barbell")
+						.exerciseType(ExerciseType.WEIGHT_AND_REPS)
 						.instructions("Press the bar.")
 						.build()));
 
@@ -39,6 +41,7 @@ class ExerciseControllerTests {
 				.andExpect(jsonPath("$[0].name").value("Bench Press"))
 				.andExpect(jsonPath("$[0].primaryMuscle").value("Chest"))
 				.andExpect(jsonPath("$[0].equipment").value("Barbell"))
+				.andExpect(jsonPath("$[0].exerciseType").value("WEIGHT_AND_REPS"))
 				.andExpect(jsonPath("$[0].instructions").value("Press the bar."));
 	}
 }

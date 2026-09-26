@@ -60,16 +60,19 @@ public class WorkoutSet {
 	@Column(name = "target_weight", precision = 8, scale = 2)
 	private BigDecimal targetWeight;
 
-	@Column(name = "target_duration_seconds")
-	private Integer targetDurationSeconds;
+	@Column(name = "target_time_seconds")
+	private Integer targetTimeSeconds;
+
+	@Column(name = "rest_seconds")
+	private Integer restSeconds;
 
 	private Integer reps;
 
 	@Column(precision = 8, scale = 2)
 	private BigDecimal weight;
 
-	@Column(name = "duration_seconds")
-	private Integer durationSeconds;
+	@Column(name = "time_seconds")
+	private Integer timeSeconds;
 
 	@Column(name = "distance_meters", precision = 10, scale = 2)
 	private BigDecimal distanceMeters;

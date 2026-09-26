@@ -46,12 +46,14 @@ INSERT INTO exercises (
     name,
     primary_muscle,
     equipment,
+    exercise_type,
     instructions
 )
 SELECT
     'Bench Press',
     'Chest',
     'Barbell',
+    'WEIGHT_AND_REPS',
     'Lower the bar under control and press it upward.'
 WHERE NOT EXISTS (
     SELECT 1
@@ -63,12 +65,14 @@ INSERT INTO exercises (
     name,
     primary_muscle,
     equipment,
+    exercise_type,
     instructions
 )
 SELECT
     'Back Squat',
     'Quadriceps',
     'Barbell',
+    'WEIGHT_AND_REPS',
     'Brace your torso, squat to a comfortable depth, and stand up.'
 WHERE NOT EXISTS (
     SELECT 1
@@ -80,17 +84,58 @@ INSERT INTO exercises (
     name,
     primary_muscle,
     equipment,
+    exercise_type,
     instructions
 )
 SELECT
     'Lat Pulldown',
     'Back',
     'Cable',
+    'WEIGHT_AND_REPS',
     'Pull the bar toward your upper chest while keeping your torso stable.'
 WHERE NOT EXISTS (
     SELECT 1
     FROM exercises
     WHERE name = 'Lat Pulldown'
+);
+
+-- Timer-only exercises
+INSERT INTO exercises (
+    name,
+    primary_muscle,
+    equipment,
+    exercise_type,
+    instructions
+)
+SELECT
+    'Plank',
+    'Core',
+    'Bodyweight',
+    'TIMED',
+    'Brace the torso and hold a straight body position.'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM exercises
+    WHERE name = 'Plank'
+);
+
+INSERT INTO exercises (
+    name,
+    primary_muscle,
+    equipment,
+    exercise_type,
+    instructions
+)
+SELECT
+    'Wall Sit',
+    'Quadriceps',
+    'Bodyweight',
+    'TIMED',
+    'Hold the seated position with your back against the wall.'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM exercises
+    WHERE name = 'Wall Sit'
 );
 
 -- Template owned by the personal trainer
@@ -151,14 +196,16 @@ INSERT INTO workout_template_sets (
     position,
     set_type,
     target_reps,
-    target_weight
+    target_weight,
+    rest_seconds
 )
 SELECT
     template_exercise.id,
     set_data.position,
     set_data.set_type,
     set_data.target_reps,
-    set_data.target_weight
+    set_data.target_weight,
+    set_data.rest_seconds
 FROM workout_template_exercises template_exercise
 JOIN workout_templates template
     ON template.id = template_exercise.workout_template_id
@@ -166,10 +213,10 @@ JOIN users trainer
     ON trainer.id = template.owner_id
 CROSS JOIN (
     VALUES
-        (0, 'WARM_UP', 10, 20.00::NUMERIC),
-        (1, 'NORMAL', 8, 40.00::NUMERIC),
-        (2, 'NORMAL', 8, 40.00::NUMERIC)
-) AS set_data(position, set_type, target_reps, target_weight)
+        (0, 'WARM_UP', 10, 20.00::NUMERIC, 60),
+        (1, 'NORMAL', 8, 40.00::NUMERIC, 90),
+        (2, 'NORMAL', 8, 40.00::NUMERIC, 90)
+) AS set_data(position, set_type, target_reps, target_weight, rest_seconds)
 WHERE trainer.email = 'alex.trainer@setforge.dev'
   AND template.name = 'Beginner Full Body'
   AND NOT EXISTS (
@@ -178,6 +225,21 @@ WHERE trainer.email = 'alex.trainer@setforge.dev'
       WHERE template_set.template_exercise_id = template_exercise.id
         AND template_set.position = set_data.position
   );
+
+-- Keep rest targets current when this repeatable seed is run against existing rows
+UPDATE workout_template_sets template_set
+SET rest_seconds = CASE template_set.position
+    WHEN 0 THEN 60
+    ELSE 90
+END
+FROM workout_template_exercises template_exercise
+JOIN workout_templates template
+    ON template.id = template_exercise.workout_template_id
+JOIN users trainer
+    ON trainer.id = template.owner_id
+WHERE template_set.template_exercise_id = template_exercise.id
+  AND trainer.email = 'alex.trainer@setforge.dev'
+  AND template.name = 'Beginner Full Body';
 
 -- One completed workout created from the development template
 INSERT INTO workout_sessions (
@@ -249,10 +311,11 @@ INSERT INTO workout_sets (
     set_type,
     target_reps,
     target_weight,
-    target_duration_seconds,
+    target_time_seconds,
+    rest_seconds,
     reps,
     weight,
-    duration_seconds,
+    time_seconds,
     completed,
     completed_at
 )
@@ -263,10 +326,11 @@ SELECT
     template_set.set_type,
     template_set.target_reps,
     template_set.target_weight,
-    template_set.target_duration_seconds,
+    template_set.target_time_seconds,
+    template_set.rest_seconds,
     template_set.target_reps,
     template_set.target_weight,
-    template_set.target_duration_seconds,
+    template_set.target_time_seconds,
     TRUE,
     '2026-09-14 19:00:00+03'::TIMESTAMPTZ
 FROM workout_session_exercises session_exercise
@@ -285,5 +349,21 @@ WHERE trainee.email = 'maria@setforge.dev'
       WHERE workout_set.session_exercise_id = session_exercise.id
         AND workout_set.position = template_set.position
   );
+
+-- Refresh copied rest targets on an already-seeded sample session
+UPDATE workout_sets workout_set
+SET rest_seconds = template_set.rest_seconds
+FROM workout_template_sets template_set,
+     workout_session_exercises session_exercise,
+     workout_sessions session,
+     users trainee
+WHERE workout_set.source_template_set_id = template_set.id
+  AND session_exercise.id = workout_set.session_exercise_id
+  AND session.id = session_exercise.workout_session_id
+  AND trainee.id = session.user_id
+  AND trainee.email = 'maria@setforge.dev'
+  AND session.name = 'Beginner Full Body - Sample Session'
+  AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
+  AND workout_set.rest_seconds IS DISTINCT FROM template_set.rest_seconds;
 
 COMMIT;
