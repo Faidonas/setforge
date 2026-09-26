@@ -20,6 +20,13 @@ erDiagram
     WORKOUT_TEMPLATES ||--o{ WORKOUT_TEMPLATE_EXERCISES : contains
     EXERCISES ||--o{ WORKOUT_TEMPLATE_EXERCISES : references
     WORKOUT_TEMPLATE_EXERCISES ||--o{ WORKOUT_TEMPLATE_SETS : plans
+    USERS ||--o{ WORKOUT_SESSIONS : performs
+    WORKOUT_TEMPLATES o|--o{ WORKOUT_SESSIONS : "source for"
+    WORKOUT_SESSIONS ||--o{ WORKOUT_SESSION_EXERCISES : records
+    EXERCISES ||--o{ WORKOUT_SESSION_EXERCISES : performed_as
+    WORKOUT_TEMPLATE_EXERCISES o|--o{ WORKOUT_SESSION_EXERCISES : "source for"
+    WORKOUT_SESSION_EXERCISES ||--o{ WORKOUT_SETS : contains
+    WORKOUT_TEMPLATE_SETS o|--o{ WORKOUT_SETS : "source for"
 
     USERS {
         bigint id PK
@@ -74,6 +81,45 @@ erDiagram
         numeric target_weight
         integer target_duration_seconds
     }
+
+    WORKOUT_SESSIONS {
+        bigint id PK
+        bigint user_id FK
+        bigint source_template_id FK
+        varchar name
+        text notes
+        varchar status
+        timestamptz started_at
+        timestamptz completed_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    WORKOUT_SESSION_EXERCISES {
+        bigint id PK
+        bigint workout_session_id FK
+        bigint exercise_id FK
+        bigint source_template_exercise_id FK
+        integer position
+        text notes
+    }
+
+    WORKOUT_SETS {
+        bigint id PK
+        bigint session_exercise_id FK
+        bigint source_template_set_id FK
+        integer position
+        varchar set_type
+        integer target_reps
+        numeric target_weight
+        integer target_duration_seconds
+        integer reps
+        numeric weight
+        integer duration_seconds
+        numeric distance_meters
+        boolean completed
+        timestamptz completed_at
+    }
 ```
 
 ## Entity catalogue
@@ -98,6 +144,7 @@ Relationships:
 - A user can be the trainer in many coaching relationships.
 - A user can be the client in many coaching relationships.
 - A user can own many workout templates, regardless of account type.
+- A user can record many workout sessions, regardless of account type.
 
 ### CoachingRelationship
 
@@ -144,6 +191,7 @@ Relationships:
 
 - `owner_id` references the user who controls the template.
 - A template contains ordered `WorkoutTemplateExercise` rows.
+- Completed and in-progress sessions may reference the template as their source.
 
 ### WorkoutTemplateExercise
 
@@ -180,16 +228,77 @@ Rules:
 - Weight uses `NUMERIC(8, 2)` in PostgreSQL and `BigDecimal` in Java to avoid floating-point
   rounding errors.
 
+### WorkoutSession
+
+Database table: `workout_sessions`
+
+A workout session is one actual workout performed by a user. Any account type can perform a
+workout. A session may start from a template or may be created as an empty workout.
+
+`status` supports:
+
+- `IN_PROGRESS`
+- `COMPLETED`
+- `CANCELLED`
+
+Rules:
+
+- `user_id` identifies the person performing the workout.
+- `source_template_id` is optional and records where the workout began.
+- The session name is stored independently so later template edits do not rename workout history.
+- Completed and cancelled sessions require `completed_at`; in-progress sessions do not have it.
+- `completed_at` cannot be earlier than `started_at`.
+- Deleting the source template sets `source_template_id` to null instead of deleting the session.
+
+### WorkoutSessionExercise
+
+Database table: `workout_session_exercises`
+
+This entity records one exercise occurrence in an actual workout. It remains separate from
+`WorkoutTemplateExercise` because users can reorder, add, remove, or substitute exercises while
+training.
+
+Rules:
+
+- `position` is zero-based, nonnegative, and unique within the workout session.
+- `exercise_id` identifies the catalogue movement that was performed.
+- `source_template_exercise_id` is optional provenance and becomes null if that template placement
+  is deleted.
+- Notes are copied into the session and can then change independently from template notes.
+
+### WorkoutSet
+
+Database table: `workout_sets`
+
+A workout set stores both the planned target snapshot and the actual performance for one set. This
+separation preserves the target shown during the workout while allowing progress and adherence to
+be calculated later.
+
+Target fields copied from a template are `target_reps`, `target_weight`, and
+`target_duration_seconds`. Actual fields are `reps`, `weight`, `duration_seconds`, and
+`distance_meters`.
+
+Rules:
+
+- `position` is zero-based, nonnegative, and unique within the session exercise.
+- `source_template_set_id` is optional and is used only as provenance.
+- All target and actual numeric values must be nonnegative when present.
+- A completed set requires `completed_at`; an incomplete set must not have it.
+- Deleting or editing the template does not change the copied target or actual values.
+
 ## Ownership and deletion
 
 The current foreign-key behavior is:
 
 | Parent deleted | Result |
 | --- | --- |
-| User | Their coaching relationships and workout templates are deleted. |
+| User | Their coaching relationships, workout templates, and workout sessions are deleted. |
 | Workout template | Its template exercises and their template sets are deleted. |
 | Workout template exercise | Its template sets are deleted. |
-| Exercise referenced by a template | Deletion is rejected to avoid breaking the template. |
+| Workout session | Its session exercises and workout sets are deleted. |
+| Workout session exercise | Its workout sets are deleted. |
+| Source template used by a session | The session remains and its source link becomes null. |
+| Exercise referenced by a template or session | Deletion is rejected to avoid breaking history. |
 
 Application services should still require an explicit ownership check before modifying or deleting
 records. Database cascades protect consistency; they are not an authorization system.
@@ -210,13 +319,10 @@ records. Database cascades protect consistency; they are not an authorization sy
 
 ## Planned entities
 
-These entities are likely next but are not implemented yet:
+This entity is likely next but is not implemented yet:
 
 | Entity | Intended purpose |
 | --- | --- |
-| `WorkoutSession` | One actual workout performed by any user, optionally based on a template. |
-| `WorkoutSessionExercise` | An ordered exercise actually performed during a session. |
-| `WorkoutSet` | Actual repetitions, weight, duration, distance, and completion state. |
 | `WorkoutAssignment` | A trainer assigning a template to a client for a date or period. |
 
 Actual workout entities must copy the relevant planned values instead of depending on a template

@@ -179,4 +179,111 @@ WHERE trainer.email = 'alex.trainer@setforge.dev'
         AND template_set.position = set_data.position
   );
 
+-- One completed workout created from the development template
+INSERT INTO workout_sessions (
+    user_id,
+    source_template_id,
+    name,
+    notes,
+    status,
+    started_at,
+    completed_at
+)
+SELECT
+    trainee.id,
+    template.id,
+    'Beginner Full Body - Sample Session',
+    'Development workout used to test session history.',
+    'COMPLETED',
+    '2026-09-14 18:00:00+03'::TIMESTAMPTZ,
+    '2026-09-14 19:00:00+03'::TIMESTAMPTZ
+FROM users trainee
+CROSS JOIN workout_templates template
+JOIN users trainer
+    ON trainer.id = template.owner_id
+WHERE trainee.email = 'maria@setforge.dev'
+  AND trainer.email = 'alex.trainer@setforge.dev'
+  AND template.name = 'Beginner Full Body'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM workout_sessions session
+      WHERE session.user_id = trainee.id
+        AND session.name = 'Beginner Full Body - Sample Session'
+        AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
+  );
+
+-- Copy the template exercises into the completed workout
+INSERT INTO workout_session_exercises (
+    workout_session_id,
+    exercise_id,
+    source_template_exercise_id,
+    position,
+    notes
+)
+SELECT
+    session.id,
+    template_exercise.exercise_id,
+    template_exercise.id,
+    template_exercise.position,
+    template_exercise.notes
+FROM workout_sessions session
+JOIN users trainee
+    ON trainee.id = session.user_id
+JOIN workout_template_exercises template_exercise
+    ON template_exercise.workout_template_id = session.source_template_id
+WHERE trainee.email = 'maria@setforge.dev'
+  AND session.name = 'Beginner Full Body - Sample Session'
+  AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
+  AND NOT EXISTS (
+      SELECT 1
+      FROM workout_session_exercises session_exercise
+      WHERE session_exercise.workout_session_id = session.id
+        AND session_exercise.position = template_exercise.position
+  );
+
+-- Copy planned targets and record Maria's actual completed sets
+INSERT INTO workout_sets (
+    session_exercise_id,
+    source_template_set_id,
+    position,
+    set_type,
+    target_reps,
+    target_weight,
+    target_duration_seconds,
+    reps,
+    weight,
+    duration_seconds,
+    completed,
+    completed_at
+)
+SELECT
+    session_exercise.id,
+    template_set.id,
+    template_set.position,
+    template_set.set_type,
+    template_set.target_reps,
+    template_set.target_weight,
+    template_set.target_duration_seconds,
+    template_set.target_reps,
+    template_set.target_weight,
+    template_set.target_duration_seconds,
+    TRUE,
+    '2026-09-14 19:00:00+03'::TIMESTAMPTZ
+FROM workout_session_exercises session_exercise
+JOIN workout_sessions session
+    ON session.id = session_exercise.workout_session_id
+JOIN users trainee
+    ON trainee.id = session.user_id
+JOIN workout_template_sets template_set
+    ON template_set.template_exercise_id = session_exercise.source_template_exercise_id
+WHERE trainee.email = 'maria@setforge.dev'
+  AND session.name = 'Beginner Full Body - Sample Session'
+  AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
+  AND NOT EXISTS (
+      SELECT 1
+      FROM workout_sets workout_set
+      WHERE workout_set.session_exercise_id = session_exercise.id
+        AND workout_set.position = template_set.position
+  );
+
 COMMIT;
