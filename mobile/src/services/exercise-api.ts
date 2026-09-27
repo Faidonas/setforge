@@ -2,19 +2,23 @@ import type { Exercise } from '@/models/exercise';
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
-export async function getExercises(): Promise<Exercise[]> {
+function getBaseUrl(): string {
   if (!apiUrl) {
     throw new Error(
       'The API URL is not configured. Set EXPO_PUBLIC_API_URL in your Expo environment.',
     );
   }
 
-  const baseUrl = apiUrl.replace(/\/$/, '');
+  return apiUrl.replace(/\/$/, '');
+}
+
+async function requestExerciseApi(path: string): Promise<unknown> {
+  const baseUrl = getBaseUrl();
 
   let response: Response;
 
   try {
-    response = await fetch(`${baseUrl}/api/exercises`);
+    response = await fetch(`${baseUrl}${path}`);
   } catch {
     throw new Error('Could not connect to the exercise API. Check the API URL and your network.');
   }
@@ -28,11 +32,42 @@ export async function getExercises(): Promise<Exercise[]> {
     );
   }
 
-  const exercises: unknown = await response.json();
+  return response.json();
+}
+
+export async function getExercises(): Promise<Exercise[]> {
+  const exercises = await requestExerciseApi('/api/exercises');
 
   if (!Array.isArray(exercises)) {
     throw new Error('The exercise API returned an unexpected response.');
   }
 
   return exercises as Exercise[];
+}
+
+export async function getExercise(exerciseId: number): Promise<Exercise> {
+  const exercise = await requestExerciseApi(`/api/exercises/${exerciseId}`);
+
+  if (!exercise || typeof exercise !== 'object' || Array.isArray(exercise)) {
+    throw new Error('The exercise API returned an unexpected response.');
+  }
+
+  return exercise as Exercise;
+}
+
+export function getExerciseAssetUrl(path: string | null): string | null {
+  if (!path) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  if (!apiUrl) {
+    return null;
+  }
+
+  const baseUrl = apiUrl.replace(/\/$/, '');
+  return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }

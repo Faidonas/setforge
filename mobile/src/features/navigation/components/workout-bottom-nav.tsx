@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { type Href, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,32 +7,57 @@ import { SetForgeColors } from '@/constants/setforge-theme';
 
 const homeIcon = require('@/assets/images/figma/home.svg');
 const historyIcon = require('@/assets/images/figma/calendar.svg');
-const startIcon = require('@/assets/images/figma/plus-dark.svg');
+const startIcon = require('@/assets/images/figma/plus.svg');
 const exercisesIcon = require('@/assets/images/figma/activity.svg');
 const profileIcon = require('@/assets/images/figma/profile.svg');
 
-const items = [
+type NavigationLabel = 'Home' | 'History' | 'Start' | 'Exercises' | 'Profile';
+
+type NavigationItem = {
+  label: NavigationLabel;
+  icon: number;
+  href?: Href;
+};
+
+const items: NavigationItem[] = [
   { label: 'Home', icon: homeIcon },
   { label: 'History', icon: historyIcon },
-  { label: 'Start', icon: startIcon, active: true },
-  { label: 'Exercises', icon: exercisesIcon },
+  { label: 'Start', icon: startIcon, href: '/start-workout' },
+  { label: 'Exercises', icon: exercisesIcon, href: '/exercises' },
   { label: 'Profile', icon: profileIcon },
 ];
 
-export function WorkoutBottomNav() {
+export function WorkoutBottomNav({ activeItem = 'Start' }: { activeItem?: NavigationLabel }) {
+  const router = useRouter();
+
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeArea}>
       <View style={styles.navigation}>
-        {items.map((item) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={item.label}
-            key={item.label}
-            style={[styles.item, item.active && styles.activeItem]}>
-            <Image source={item.icon} style={styles.icon} contentFit="contain" />
-            {!item.active && <Text style={styles.label}>{item.label}</Text>}
-          </Pressable>
-        ))}
+        {items.map((item) => {
+          const isActive = item.label === activeItem;
+          const href = item.href;
+
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              accessibilityState={{ disabled: !href, selected: isActive }}
+              disabled={!href}
+              key={item.label}
+              onPress={href ? () => router.navigate(href) : undefined}
+              style={({ pressed }) => [styles.item, pressed && styles.pressedItem]}>
+              <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
+                <Image
+                  source={item.icon}
+                  style={styles.icon}
+                  contentFit="contain"
+                  tintColor={isActive ? SetForgeColors.accent : SetForgeColors.textSecondary}
+                />
+              </View>
+              <Text style={[styles.label, isActive && styles.activeLabel]}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
     </SafeAreaView>
   );
@@ -44,24 +70,35 @@ const styles = StyleSheet.create({
     backgroundColor: SetForgeColors.surface,
   },
   navigation: {
-    height: 64,
+    height: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
   },
   item: {
-    width: 56,
-    height: 48,
+    width: 64,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 3,
   },
-  activeItem: {
+  pressedItem: {
+    opacity: 0.65,
+  },
+  iconContainer: {
+    width: 30,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: 7,
+  },
+  activeIconContainer: {
     borderWidth: 1,
     borderColor: SetForgeColors.accent,
-    borderRadius: 8,
-    backgroundColor: SetForgeColors.accent,
+    backgroundColor: SetForgeColors.accentTint,
   },
   icon: {
     width: 20,
@@ -71,5 +108,9 @@ const styles = StyleSheet.create({
     color: SetForgeColors.textSecondary,
     fontSize: 10,
     lineHeight: 13,
+  },
+  activeLabel: {
+    color: SetForgeColors.accent,
+    fontWeight: '700',
   },
 });

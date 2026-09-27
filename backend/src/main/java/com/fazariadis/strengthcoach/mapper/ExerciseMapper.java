@@ -15,6 +15,13 @@ public class ExerciseMapper {
 				.equipment(exercise.getEquipment())
 				.exerciseType(exercise.getExerciseType())
 				.instructions(exercise.getInstructions())
+				.bodyPart(exercise.getBodyPart())
+				.muscleGroup(exercise.getMuscleGroup())
+				.secondaryMuscles(exercise.getSecondaryMuscles())
+				.sourceId(exercise.getSourceId())
+				.thumbnailUrl(exercise.getThumbnailUrl())
+				.animationUrl(exercise.getAnimationUrl())
+				.attribution(exercise.getAttribution())
 				.build();
 	}
 }

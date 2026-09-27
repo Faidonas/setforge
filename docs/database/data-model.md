@@ -179,8 +179,14 @@ Database table: `exercises`
 An exercise is a reusable movement in the exercise catalogue. It describes the movement itself,
 not its placement in a routine and not a user's performance.
 
-It contains a name, primary muscle, required equipment, tracking type, and optional instructions.
+It contains a name, primary muscle, required equipment, tracking type, optional instructions, and
+optional catalogue media. Imported practice data also records its source identifier, body part,
+supporting muscles, thumbnail, animation, and the attribution that must be displayed with the media.
 A single exercise can be referenced by many workout templates.
+
+The current practice catalogue comes from `hasaneyldrm/exercises-dataset`. Its data and instruction
+text use the MIT licence. Its 180x180 thumbnails and GIFs remain the property of GymVisual and are
+kept only for local learning. They must be licensed or replaced before SetForge is distributed.
 
 `exercise_type` supports:
 

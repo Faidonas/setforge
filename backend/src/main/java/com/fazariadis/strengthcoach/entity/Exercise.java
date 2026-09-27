@@ -43,4 +43,28 @@ public class Exercise {
 
 	@Column(columnDefinition = "TEXT")
 	private String instructions;
+
+	@Column(name = "body_part", length = 50)
+	private String bodyPart;
+
+	@Column(name = "muscle_group", length = 100)
+	private String muscleGroup;
+
+	@Column(name = "secondary_muscles", columnDefinition = "TEXT")
+	private String secondaryMuscles;
+
+	@Column(name = "source_name", length = 100)
+	private String sourceName;
+
+	@Column(name = "source_id", length = 50)
+	private String sourceId;
+
+	@Column(name = "thumbnail_url", length = 255)
+	private String thumbnailUrl;
+
+	@Column(name = "animation_url", length = 255)
+	private String animationUrl;
+
+	@Column(length = 255)
+	private String attribution;
 }

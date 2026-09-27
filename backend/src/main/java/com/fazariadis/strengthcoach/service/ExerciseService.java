@@ -1,6 +1,7 @@
 package com.fazariadis.strengthcoach.service;
 
 import com.fazariadis.strengthcoach.dto.ExerciseResponse;
+import com.fazariadis.strengthcoach.exception.ResourceNotFoundException;
 import com.fazariadis.strengthcoach.mapper.ExerciseMapper;
 import com.fazariadis.strengthcoach.repository.ExerciseRepository;
 import java.util.List;
@@ -20,5 +21,13 @@ public class ExerciseService {
 		return exerciseRepository.findAllByOrderByNameAsc().stream()
 				.map(exerciseMapper::toResponse)
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public ExerciseResponse getExercise(long exerciseId) {
+		return exerciseRepository.findById(exerciseId)
+				.map(exerciseMapper::toResponse)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Exercise " + exerciseId + " was not found"));
 	}
 }

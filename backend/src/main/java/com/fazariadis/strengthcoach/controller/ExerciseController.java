@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,5 +25,13 @@ public class ExerciseController {
 	@ApiResponse(responseCode = "200", description = "Exercises returned successfully")
 	public List<ExerciseResponse> getAllExercises() {
 		return exerciseService.getAllExercises();
+	}
+
+	@GetMapping("/{exerciseId}")
+	@Operation(summary = "Get an exercise", description = "Returns one exercise and its media URLs.")
+	@ApiResponse(responseCode = "200", description = "Exercise returned successfully")
+	@ApiResponse(responseCode = "404", description = "Exercise not found")
+	public ExerciseResponse getExercise(@PathVariable long exerciseId) {
+		return exerciseService.getExercise(exerciseId);
 	}
 }

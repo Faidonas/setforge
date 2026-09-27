@@ -6,6 +6,15 @@ CREATE TABLE IF NOT EXISTS exercises
     equipment      VARCHAR(50)  NOT NULL,
     exercise_type  VARCHAR(30)  NOT NULL DEFAULT 'WEIGHT_AND_REPS',
     instructions   TEXT,
+    body_part       VARCHAR(50),
+    muscle_group    VARCHAR(100),
+    secondary_muscles TEXT,
+    source_name     VARCHAR(100),
+    source_id       VARCHAR(50),
+    thumbnail_url   VARCHAR(255),
+    animation_url   VARCHAR(255),
+    attribution     VARCHAR(255),
+    CONSTRAINT uq_exercises_source UNIQUE (source_name, source_id),
     CONSTRAINT ck_exercises_type
         CHECK (exercise_type IN ('WEIGHT_AND_REPS', 'TIMED'))
 );
@@ -232,6 +241,20 @@ CREATE TABLE IF NOT EXISTS workout_sets
 -- Upgrade an existing development database. These statements are safe to rerun.
 ALTER TABLE exercises
     ADD COLUMN IF NOT EXISTS exercise_type VARCHAR(30) NOT NULL DEFAULT 'WEIGHT_AND_REPS';
+
+ALTER TABLE exercises
+    ADD COLUMN IF NOT EXISTS body_part VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS muscle_group VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS secondary_muscles TEXT,
+    ADD COLUMN IF NOT EXISTS source_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS source_id VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS animation_url VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS attribution VARCHAR(255);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_exercises_source
+    ON exercises (source_name, source_id)
+    WHERE source_name IS NOT NULL AND source_id IS NOT NULL;
 
 DO $$
 BEGIN

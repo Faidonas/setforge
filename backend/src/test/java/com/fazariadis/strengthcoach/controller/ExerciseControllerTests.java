@@ -32,6 +32,10 @@ class ExerciseControllerTests {
 						.equipment("Barbell")
 						.exerciseType(ExerciseType.WEIGHT_AND_REPS)
 						.instructions("Press the bar.")
+						.bodyPart("chest")
+						.thumbnailUrl("/exercise-media/images/0025-example.jpg")
+						.animationUrl("/exercise-media/gifs/0025-example.gif")
+						.attribution("© Gym visual — https://gymvisual.com/")
 						.build()));
 
 		mockMvc.perform(get("/api/exercises"))
@@ -42,6 +46,33 @@ class ExerciseControllerTests {
 				.andExpect(jsonPath("$[0].primaryMuscle").value("Chest"))
 				.andExpect(jsonPath("$[0].equipment").value("Barbell"))
 				.andExpect(jsonPath("$[0].exerciseType").value("WEIGHT_AND_REPS"))
-				.andExpect(jsonPath("$[0].instructions").value("Press the bar."));
+				.andExpect(jsonPath("$[0].instructions").value("Press the bar."))
+				.andExpect(jsonPath("$[0].bodyPart").value("chest"))
+				.andExpect(jsonPath("$[0].thumbnailUrl")
+						.value("/exercise-media/images/0025-example.jpg"))
+				.andExpect(jsonPath("$[0].animationUrl")
+						.value("/exercise-media/gifs/0025-example.gif"))
+				.andExpect(jsonPath("$[0].attribution")
+						.value("© Gym visual — https://gymvisual.com/"));
+	}
+
+	@Test
+	void getExerciseReturnsOneResponseDto() throws Exception {
+		when(exerciseService.getExercise(7L)).thenReturn(ExerciseResponse.builder()
+				.id(7L)
+				.name("Plank")
+				.primaryMuscle("Abs")
+				.equipment("Body weight")
+				.exerciseType(ExerciseType.TIMED)
+				.animationUrl("/exercise-media/gifs/plank.gif")
+				.build());
+
+		mockMvc.perform(get("/api/exercises/7"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(7))
+				.andExpect(jsonPath("$.name").value("Plank"))
+				.andExpect(jsonPath("$.exerciseType").value("TIMED"))
+				.andExpect(jsonPath("$.animationUrl")
+						.value("/exercise-media/gifs/plank.gif"));
 	}
 }

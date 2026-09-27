@@ -31,4 +31,25 @@ public class ExerciseResponse {
 
 	@Schema(description = "Instructions for performing the exercise", nullable = true)
 	private String instructions;
+
+	@Schema(description = "Broad body area trained", example = "chest", nullable = true)
+	private String bodyPart;
+
+	@Schema(description = "Supporting muscle group", example = "triceps", nullable = true)
+	private String muscleGroup;
+
+	@Schema(description = "Comma-separated secondary muscles", nullable = true)
+	private String secondaryMuscles;
+
+	@Schema(description = "Practice dataset identifier", example = "0025", nullable = true)
+	private String sourceId;
+
+	@Schema(description = "Relative URL of the exercise thumbnail", nullable = true)
+	private String thumbnailUrl;
+
+	@Schema(description = "Relative URL of the animated exercise demonstration", nullable = true)
+	private String animationUrl;
+
+	@Schema(description = "Required media attribution", nullable = true)
+	private String attribution;
 }

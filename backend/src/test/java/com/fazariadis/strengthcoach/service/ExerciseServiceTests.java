@@ -1,6 +1,7 @@
 package com.fazariadis.strengthcoach.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -8,9 +9,11 @@ import static org.mockito.Mockito.when;
 import com.fazariadis.strengthcoach.dto.ExerciseResponse;
 import com.fazariadis.strengthcoach.entity.Exercise;
 import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
+import com.fazariadis.strengthcoach.exception.ResourceNotFoundException;
 import com.fazariadis.strengthcoach.mapper.ExerciseMapper;
 import com.fazariadis.strengthcoach.repository.ExerciseRepository;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ExerciseServiceTests {
@@ -46,16 +49,58 @@ class ExerciseServiceTests {
 		when(benchPress.getEquipment()).thenReturn(benchPressResponse.getEquipment());
 		when(benchPress.getExerciseType()).thenReturn(benchPressResponse.getExerciseType());
 		when(benchPress.getInstructions()).thenReturn(benchPressResponse.getInstructions());
+		when(benchPress.getBodyPart()).thenReturn(benchPressResponse.getBodyPart());
+		when(benchPress.getMuscleGroup()).thenReturn(benchPressResponse.getMuscleGroup());
+		when(benchPress.getSecondaryMuscles()).thenReturn(benchPressResponse.getSecondaryMuscles());
+		when(benchPress.getSourceId()).thenReturn(benchPressResponse.getSourceId());
+		when(benchPress.getThumbnailUrl()).thenReturn(benchPressResponse.getThumbnailUrl());
+		when(benchPress.getAnimationUrl()).thenReturn(benchPressResponse.getAnimationUrl());
+		when(benchPress.getAttribution()).thenReturn(benchPressResponse.getAttribution());
 		when(squat.getId()).thenReturn(squatResponse.getId());
 		when(squat.getName()).thenReturn(squatResponse.getName());
 		when(squat.getPrimaryMuscle()).thenReturn(squatResponse.getPrimaryMuscle());
 		when(squat.getEquipment()).thenReturn(squatResponse.getEquipment());
 		when(squat.getExerciseType()).thenReturn(squatResponse.getExerciseType());
 		when(squat.getInstructions()).thenReturn(squatResponse.getInstructions());
+		when(squat.getBodyPart()).thenReturn(squatResponse.getBodyPart());
+		when(squat.getMuscleGroup()).thenReturn(squatResponse.getMuscleGroup());
+		when(squat.getSecondaryMuscles()).thenReturn(squatResponse.getSecondaryMuscles());
+		when(squat.getSourceId()).thenReturn(squatResponse.getSourceId());
+		when(squat.getThumbnailUrl()).thenReturn(squatResponse.getThumbnailUrl());
+		when(squat.getAnimationUrl()).thenReturn(squatResponse.getAnimationUrl());
+		when(squat.getAttribution()).thenReturn(squatResponse.getAttribution());
 
 		List<ExerciseResponse> result = exerciseService.getAllExercises();
 
 		assertThat(result).containsExactly(benchPressResponse, squatResponse);
 		verify(exerciseRepository).findAllByOrderByNameAsc();
+	}
+
+	@Test
+	void returnsOneMappedExerciseById() {
+		Exercise exercise = Exercise.builder()
+				.id(7L)
+				.name("Plank")
+				.primaryMuscle("Abs")
+				.equipment("Body weight")
+				.exerciseType(ExerciseType.TIMED)
+				.animationUrl("/exercise-media/gifs/plank.gif")
+				.build();
+		when(exerciseRepository.findById(7L)).thenReturn(Optional.of(exercise));
+
+		ExerciseResponse result = exerciseService.getExercise(7L);
+
+		assertThat(result.getId()).isEqualTo(7L);
+		assertThat(result.getName()).isEqualTo("Plank");
+		assertThat(result.getAnimationUrl()).isEqualTo("/exercise-media/gifs/plank.gif");
+	}
+
+	@Test
+	void reportsMissingExerciseById() {
+		when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> exerciseService.getExercise(99L))
+				.isInstanceOf(ResourceNotFoundException.class)
+				.hasMessage("Exercise 99 was not found");
 	}
 }
