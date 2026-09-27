@@ -61,6 +61,7 @@ class WorkoutTemplateServiceTests {
 				.name("Back Squat")
 				.primaryMuscle("Quadriceps")
 				.equipment("Barbell")
+				.thumbnailUrl("/media/exercises/back-squat.jpg")
 				.build();
 		Exercise bench = Exercise.builder()
 				.id(11L)
@@ -152,6 +153,8 @@ class WorkoutTemplateServiceTests {
 		assertThat(response.getExercises().getFirst().getSets().get(1).getTargetWeight())
 				.isEqualByComparingTo("80.00");
 		assertThat(response.getExercises().getFirst().getSets().get(1).getRestSeconds()).isEqualTo(90);
+		assertThat(response.getExercises().getFirst().getThumbnailUrl())
+				.isEqualTo("/media/exercises/back-squat.jpg");
 		assertThat(response.getExercises().get(2).getExerciseType()).isEqualTo(ExerciseType.TIMED);
 		assertThat(response.getExercises().get(2).getSets().getFirst().getTargetTimeSeconds())
 				.isEqualTo(45);

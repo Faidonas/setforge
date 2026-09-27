@@ -9,6 +9,8 @@ const moreIcon = require('@/assets/images/figma/more-horizontal.svg');
 
 type WorkoutTemplateCardProps = {
   template: WorkoutTemplate;
+  onPress: () => void;
+  onMorePress: () => void;
 };
 
 function formatUpdatedAt(updatedAt: string) {
@@ -25,14 +27,18 @@ function formatUpdatedAt(updatedAt: string) {
   }).format(date)}`;
 }
 
-export function WorkoutTemplateCard({ template }: WorkoutTemplateCardProps) {
+export function WorkoutTemplateCard({ template, onPress, onMorePress }: WorkoutTemplateCardProps) {
   const exerciseSummary = template.exercises
     .slice(0, 3)
     .map((exercise) => exercise.exerciseName)
     .join(', ');
 
   return (
-    <Pressable accessibilityRole="button" style={styles.card}>
+    <Pressable
+      accessibilityLabel={`Preview ${template.name}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
           <Text numberOfLines={1} style={styles.name}>
@@ -42,7 +48,14 @@ export function WorkoutTemplateCard({ template }: WorkoutTemplateCardProps) {
             {template.exercises.length} {template.exercises.length === 1 ? 'exercise' : 'exercises'}
           </Text>
         </View>
-        <Pressable accessibilityLabel={`More options for ${template.name}`} hitSlop={8}>
+        <Pressable
+          accessibilityLabel={`More options for ${template.name}`}
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={(event) => {
+            event.stopPropagation();
+            onMorePress();
+          }}>
           <Image source={moreIcon} style={styles.moreIcon} contentFit="contain" />
         </Pressable>
       </View>
@@ -67,6 +80,9 @@ const styles = StyleSheet.create({
     borderColor: SetForgeColors.border,
     borderRadius: 8,
     backgroundColor: SetForgeColors.surface,
+  },
+  cardPressed: {
+    opacity: 0.76,
   },
   headingRow: {
     flexDirection: 'row',

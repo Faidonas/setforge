@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,9 +12,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
+import { WorkoutTemplateActionsModal } from '@/features/workouts/components/workout-template-actions-modal';
 import { WorkoutTemplateCard } from '@/features/workouts/components/workout-template-card';
-import type { WorkoutTemplate } from '@/models/workout-template';
-import { getWorkoutTemplates } from '@/services/workout-template-api';
+import { WorkoutTemplatePreviewModal } from '@/features/workouts/components/workout-template-preview-modal';
+import type {
+  CreateWorkoutTemplateExerciseRequest,
+  WorkoutTemplate,
+} from '@/models/workout-template';
+import {
+  createWorkoutTemplate,
+  deleteWorkoutTemplate,
+  getWorkoutTemplates,
+  updateWorkoutTemplate,
+} from '@/services/workout-template-api';
 
 const moreIcon = require('@/assets/images/figma/more-horizontal.svg');
 const plusIcon = require('@/assets/images/figma/plus.svg');
@@ -22,9 +33,12 @@ const plusIcon = require('@/assets/images/figma/plus.svg');
 const DEVELOPMENT_OWNER_ID = 1;
 
 export default function StartWorkoutScreen() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplate | null>(null);
+  const [actionTemplate, setActionTemplate] = useState<WorkoutTemplate | null>(null);
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -38,6 +52,70 @@ export default function StartWorkoutScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  const renameTemplate = async (name: string) => {
+    if (!actionTemplate) {
+      return;
+    }
+
+    const updatedTemplate = await updateWorkoutTemplate(actionTemplate.id, {
+      name,
+      description: actionTemplate.description,
+      exercises: toWriteExercises(actionTemplate),
+    });
+
+    setTemplates((currentTemplates) => [
+      updatedTemplate,
+      ...currentTemplates.filter((template) => template.id !== updatedTemplate.id),
+    ]);
+    setSelectedTemplate((currentTemplate) =>
+      currentTemplate?.id === updatedTemplate.id ? updatedTemplate : currentTemplate,
+    );
+  };
+
+  const duplicateTemplate = async () => {
+    if (!actionTemplate) {
+      return;
+    }
+
+    const duplicateName = `${actionTemplate.name.slice(0, 95).trimEnd()} Copy`;
+    const duplicatedTemplate = await createWorkoutTemplate({
+      ownerId: actionTemplate.ownerId,
+      name: duplicateName,
+      description: actionTemplate.description,
+      exercises: toWriteExercises(actionTemplate),
+    });
+
+    setTemplates((currentTemplates) => [duplicatedTemplate, ...currentTemplates]);
+  };
+
+  const deleteTemplate = async () => {
+    if (!actionTemplate) {
+      return;
+    }
+
+    const deletedTemplateId = actionTemplate.id;
+    await deleteWorkoutTemplate(deletedTemplateId);
+    setTemplates((currentTemplates) =>
+      currentTemplates.filter((template) => template.id !== deletedTemplateId),
+    );
+    setSelectedTemplate((currentTemplate) =>
+      currentTemplate?.id === deletedTemplateId ? null : currentTemplate,
+    );
+  };
+
+  const openTemplateEditor = (template: WorkoutTemplate) => {
+    const templateId = template.id.toString();
+    setActionTemplate(null);
+    setSelectedTemplate(null);
+    router.push({ pathname: '/edit-template/[id]', params: { id: templateId } });
+  };
+
+  const editTemplate = () => {
+    if (actionTemplate) {
+      openTemplateEditor(actionTemplate);
+    }
+  };
 
   useEffect(() => {
     let isCurrent = true;
@@ -73,7 +151,13 @@ export default function StartWorkoutScreen() {
           contentContainerStyle={styles.content}
           data={templates}
           keyExtractor={(template) => template.id.toString()}
-          renderItem={({ item }) => <WorkoutTemplateCard template={item} />}
+          renderItem={({ item }) => (
+            <WorkoutTemplateCard
+              onMorePress={() => setActionTemplate(item)}
+              onPress={() => setSelectedTemplate(item)}
+              template={item}
+            />
+          )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListHeaderComponent={
             <>
@@ -92,7 +176,10 @@ export default function StartWorkoutScreen() {
 
               <View style={styles.templatesHeader}>
                 <Text style={styles.templatesTitle}>MY TEMPLATES ({templates.length})</Text>
-                <Pressable accessibilityRole="button" style={styles.newTemplateButton}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/create-template/new')}
+                  style={styles.newTemplateButton}>
                   <Image source={plusIcon} style={styles.plusIcon} contentFit="contain" />
                   <Text style={styles.newTemplateLabel}>NEW TEMPLATE</Text>
                 </Pressable>
@@ -107,9 +194,36 @@ export default function StartWorkoutScreen() {
             />
           }
         />
+        <WorkoutTemplatePreviewModal
+          onClose={() => setSelectedTemplate(null)}
+          onEdit={openTemplateEditor}
+          template={selectedTemplate}
+        />
+        <WorkoutTemplateActionsModal
+          onClose={() => setActionTemplate(null)}
+          onDelete={deleteTemplate}
+          onDuplicate={duplicateTemplate}
+          onEdit={editTemplate}
+          onRename={renameTemplate}
+          template={actionTemplate}
+        />
       </View>
     </SafeAreaView>
   );
+}
+
+function toWriteExercises(template: WorkoutTemplate): CreateWorkoutTemplateExerciseRequest[] {
+  return template.exercises.map((exercise) => ({
+    exerciseId: exercise.exerciseId,
+    notes: exercise.notes,
+    sets: exercise.sets.map((set) => ({
+      setType: set.setType,
+      targetReps: set.targetReps,
+      targetWeight: set.targetWeight,
+      targetTimeSeconds: set.targetTimeSeconds,
+      restSeconds: set.restSeconds,
+    })),
+  }));
 }
 
 type TemplateListStateProps = {

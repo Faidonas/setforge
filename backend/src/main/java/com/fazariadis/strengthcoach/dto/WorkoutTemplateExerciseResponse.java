@@ -21,6 +21,7 @@ public class WorkoutTemplateExerciseResponse {
 	private String primaryMuscle;
 	private String equipment;
 	private ExerciseType exerciseType;
+	private String thumbnailUrl;
 	private Integer position;
 	private String notes;
 	private List<WorkoutTemplateSetResponse> sets;

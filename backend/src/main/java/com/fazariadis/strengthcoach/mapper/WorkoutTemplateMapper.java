@@ -41,6 +41,7 @@ public class WorkoutTemplateMapper {
 				.primaryMuscle(templateExercise.getExercise().getPrimaryMuscle())
 				.equipment(templateExercise.getExercise().getEquipment())
 				.exerciseType(templateExercise.getExercise().getExerciseType())
+				.thumbnailUrl(templateExercise.getExercise().getThumbnailUrl())
 				.position(templateExercise.getPosition())
 				.notes(templateExercise.getNotes())
 				.sets(sets.stream().map(this::toSetResponse).toList())

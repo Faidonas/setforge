@@ -19,6 +19,7 @@ export type WorkoutTemplateExercise = {
   primaryMuscle: string;
   equipment: string;
   exerciseType: ExerciseType;
+  thumbnailUrl?: string | null;
   position: number;
   notes?: string;
   sets: WorkoutTemplateSet[];
@@ -33,3 +34,26 @@ export type WorkoutTemplate = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type CreateWorkoutTemplateSetRequest = {
+  setType: WorkoutSetType;
+  targetReps?: number;
+  targetWeight?: number;
+  targetTimeSeconds?: number;
+  restSeconds?: number;
+};
+
+export type CreateWorkoutTemplateExerciseRequest = {
+  exerciseId: number;
+  notes?: string;
+  sets: CreateWorkoutTemplateSetRequest[];
+};
+
+export type CreateWorkoutTemplateRequest = {
+  ownerId: number;
+  name: string;
+  description?: string;
+  exercises: CreateWorkoutTemplateExerciseRequest[];
+};
+
+export type UpdateWorkoutTemplateRequest = Omit<CreateWorkoutTemplateRequest, 'ownerId'>;
