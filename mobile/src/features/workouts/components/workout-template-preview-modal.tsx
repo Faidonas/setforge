@@ -9,12 +9,16 @@ type WorkoutTemplatePreviewModalProps = {
   template: WorkoutTemplate | null;
   onClose: () => void;
   onEdit: (template: WorkoutTemplate) => void;
+  onStart: (template: WorkoutTemplate) => void;
+  isStarting?: boolean;
 };
 
 export function WorkoutTemplatePreviewModal({
   template,
   onClose,
   onEdit,
+  onStart,
+  isStarting = false,
 }: WorkoutTemplatePreviewModalProps) {
   return (
     <Modal
@@ -77,10 +81,13 @@ export function WorkoutTemplatePreviewModal({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: true }}
-                  disabled
+                  accessibilityState={{ disabled: isStarting }}
+                  disabled={isStarting}
+                  onPress={() => onStart(template)}
                   style={[styles.actionButton, styles.startButton]}>
-                  <Text style={styles.startButtonLabel}>START WORKOUT</Text>
+                  <Text style={styles.startButtonLabel}>
+                    {isStarting ? 'STARTING...' : 'START WORKOUT'}
+                  </Text>
                 </Pressable>
               </View>
             </>

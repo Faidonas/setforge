@@ -17,17 +17,21 @@ import { useCreateTemplateDraft } from '@/features/workouts/create-template/crea
 import type { Exercise } from '@/models/exercise';
 import { getExerciseAssetUrl, getExercises } from '@/services/exercise-api';
 
-export default function ExercisePickerScreen() {
+type ExercisePickerProps = {
+  existingExerciseIds: number[];
+  onAddExercises: (exercises: Exercise[]) => void;
+};
+
+export function ExercisePicker({ existingExerciseIds, onAddExercises }: ExercisePickerProps) {
   const router = useRouter();
-  const { addExercises, exercises: draftExercises } = useCreateTemplateDraft();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const existingIds = useMemo(
-    () => new Set(draftExercises.map(({ exercise }) => exercise.id)),
-    [draftExercises],
+    () => new Set(existingExerciseIds),
+    [existingExerciseIds],
   );
 
   const loadExercises = useCallback(async () => {
@@ -101,7 +105,7 @@ export default function ExercisePickerScreen() {
   };
 
   const confirmSelection = () => {
-    addExercises(exercises.filter((exercise) => selectedIds.has(exercise.id)));
+    onAddExercises(exercises.filter((exercise) => selectedIds.has(exercise.id)));
     router.back();
   };
 
@@ -169,6 +173,17 @@ export default function ExercisePickerScreen() {
         )}
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function ExercisePickerScreen() {
+  const { addExercises, exercises } = useCreateTemplateDraft();
+
+  return (
+    <ExercisePicker
+      existingExerciseIds={exercises.map(({ exercise }) => exercise.id)}
+      onAddExercises={addExercises}
+    />
   );
 }
 

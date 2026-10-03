@@ -3,6 +3,7 @@ package com.fazariadis.strengthcoach.repository;
 import com.fazariadis.strengthcoach.entity.WorkoutSession;
 import com.fazariadis.strengthcoach.entity.enums.WorkoutSessionStatus;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, Long> {
@@ -10,5 +11,8 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 	List<WorkoutSession> findAllByUser_IdOrderByStartedAtDesc(Long userId);
 
 	List<WorkoutSession> findAllByUser_IdAndStatusOrderByStartedAtDesc(
+			Long userId, WorkoutSessionStatus status);
+
+	Optional<WorkoutSession> findFirstByUser_IdAndStatusOrderByStartedAtDesc(
 			Long userId, WorkoutSessionStatus status);
 }

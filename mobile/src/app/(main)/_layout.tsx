@@ -3,10 +3,15 @@ import { StyleSheet, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { WorkoutBottomNav } from '@/features/navigation/components/workout-bottom-nav';
+import { ActiveWorkoutBar } from '@/features/workouts/active-workout/active-workout-bar';
 
 export default function MainLayout() {
   const pathname = usePathname();
-  const activeItem = pathname === '/exercises' ? 'Exercises' : 'Start';
+  const activeItem = pathname === '/exercises'
+    ? 'Exercises'
+    : pathname === '/history'
+      ? 'History'
+      : 'Start';
 
   return (
     <View style={styles.background}>
@@ -14,6 +19,7 @@ export default function MainLayout() {
         <View style={styles.content}>
           <Slot />
         </View>
+        <ActiveWorkoutBar />
         <WorkoutBottomNav activeItem={activeItem} />
       </View>
     </View>

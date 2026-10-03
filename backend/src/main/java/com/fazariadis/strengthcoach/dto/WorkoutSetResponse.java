@@ -1,0 +1,29 @@
+package com.fazariadis.strengthcoach.dto;
+
+import com.fazariadis.strengthcoach.entity.enums.SetType;
+import java.math.BigDecimal;
+import java.time.Instant;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class WorkoutSetResponse {
+
+	private Long id;
+	private Integer position;
+	private SetType setType;
+	private Integer targetReps;
+	private BigDecimal targetWeight;
+	private Integer targetTimeSeconds;
+	private Integer restSeconds;
+	private Integer reps;
+	private BigDecimal weight;
+	private Integer timeSeconds;
+	private boolean completed;
+	private Instant completedAt;
+}

@@ -266,6 +266,8 @@ Rules:
 - `user_id` identifies the person performing the workout.
 - `source_template_id` is optional and records where the workout began.
 - The session name is stored independently so later template edits do not rename workout history.
+- A user can have only one `IN_PROGRESS` workout at a time. Completed and cancelled workouts do
+  not prevent a new workout from starting.
 - Completed and cancelled sessions require `completed_at`; in-progress sessions do not have it.
 - `completed_at` cannot be earlier than `started_at`.
 - Deleting the source template sets `source_template_id` to null instead of deleting the session.

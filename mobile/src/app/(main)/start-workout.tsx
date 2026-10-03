@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
+import { DEVELOPMENT_USER_ID } from '@/constants/development';
+import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 import { WorkoutTemplateActionsModal } from '@/features/workouts/components/workout-template-actions-modal';
 import { WorkoutTemplateCard } from '@/features/workouts/components/workout-template-card';
 import { WorkoutTemplatePreviewModal } from '@/features/workouts/components/workout-template-preview-modal';
@@ -25,27 +28,83 @@ import {
   getWorkoutTemplates,
   updateWorkoutTemplate,
 } from '@/services/workout-template-api';
+import { cancelWorkoutSession, startWorkoutSession } from '@/services/workout-session-api';
 
 const moreIcon = require('@/assets/images/figma/more-horizontal.svg');
 const plusIcon = require('@/assets/images/figma/plus.svg');
 
-// Authentication is not available yet. Replace this with the signed-in user's ID later.
-const DEVELOPMENT_OWNER_ID = 1;
-
 export default function StartWorkoutScreen() {
   const router = useRouter();
+  const activeWorkout = useActiveWorkout();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplate | null>(null);
   const [actionTemplate, setActionTemplate] = useState<WorkoutTemplate | null>(null);
+  const [isStartingWorkout, setIsStartingWorkout] = useState(false);
+  const [pendingStart, setPendingStart] = useState<{ template?: WorkoutTemplate } | null>(null);
+
+  const createWorkout = async (template?: WorkoutTemplate) => {
+    const session = await startWorkoutSession({
+      userId: DEVELOPMENT_USER_ID,
+      templateId: template?.id,
+    });
+    activeWorkout.loadSession(session);
+    setSelectedTemplate(null);
+    router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
+  };
+
+  const startWorkout = async (template?: WorkoutTemplate) => {
+    if (isStartingWorkout || activeWorkout.isHydrating) return;
+    if (activeWorkout.session?.status === 'IN_PROGRESS') {
+      setSelectedTemplate(null);
+      setPendingStart({ template });
+      return;
+    }
+    try {
+      setIsStartingWorkout(true);
+      setError(null);
+      await createWorkout(template);
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : 'Could not start the workout.');
+    } finally {
+      setIsStartingWorkout(false);
+    }
+  };
+
+  const discardAndStartWorkout = async () => {
+    const currentSession = activeWorkout.session;
+    const template = pendingStart?.template;
+    if (!currentSession || isStartingWorkout) return;
+    try {
+      setIsStartingWorkout(true);
+      setError(null);
+      setPendingStart(null);
+      await cancelWorkoutSession(currentSession.id);
+      activeWorkout.reset();
+      await createWorkout(template);
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : 'Could not start the workout.');
+      await activeWorkout.refreshActiveWorkout();
+    } finally {
+      setIsStartingWorkout(false);
+    }
+  };
+
+  const resumeWorkout = () => {
+    const session = activeWorkout.session;
+    setPendingStart(null);
+    if (session) {
+      router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
+    }
+  };
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      setTemplates(await getWorkoutTemplates(DEVELOPMENT_OWNER_ID));
+      setTemplates(await getWorkoutTemplates(DEVELOPMENT_USER_ID));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load workout templates.');
     } finally {
@@ -120,7 +179,7 @@ export default function StartWorkoutScreen() {
   useEffect(() => {
     let isCurrent = true;
 
-    getWorkoutTemplates(DEVELOPMENT_OWNER_ID)
+    getWorkoutTemplates(DEVELOPMENT_USER_ID)
       .then((loadedTemplates) => {
         if (isCurrent) {
           setTemplates(loadedTemplates);
@@ -169,10 +228,23 @@ export default function StartWorkoutScreen() {
               </View>
 
               <View style={styles.quickStart}>
-                <Pressable accessibilityRole="button" style={styles.primaryButton}>
-                  <Text style={styles.primaryButtonLabel}>START EMPTY WORKOUT</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isStartingWorkout || activeWorkout.isHydrating}
+                  onPress={() => void startWorkout()}
+                  style={[
+                    styles.primaryButton,
+                    (isStartingWorkout || activeWorkout.isHydrating) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.primaryButtonLabel}>
+                    {isStartingWorkout ? 'STARTING...' : 'START EMPTY WORKOUT'}
+                  </Text>
                 </Pressable>
               </View>
+
+              {error && templates.length > 0 && (
+                <Text style={styles.inlineError}>{error}</Text>
+              )}
 
               <View style={styles.templatesHeader}>
                 <Text style={styles.templatesTitle}>MY TEMPLATES ({templates.length})</Text>
@@ -197,6 +269,8 @@ export default function StartWorkoutScreen() {
         <WorkoutTemplatePreviewModal
           onClose={() => setSelectedTemplate(null)}
           onEdit={openTemplateEditor}
+          onStart={(template) => void startWorkout(template)}
+          isStarting={isStartingWorkout || activeWorkout.isHydrating}
           template={selectedTemplate}
         />
         <WorkoutTemplateActionsModal
@@ -207,8 +281,59 @@ export default function StartWorkoutScreen() {
           onRename={renameTemplate}
           template={actionTemplate}
         />
+        <ActiveWorkoutWarningModal
+          activeWorkoutName={activeWorkout.session?.name ?? 'Current Workout'}
+          isBusy={isStartingWorkout}
+          onClose={() => setPendingStart(null)}
+          onResume={resumeWorkout}
+          onStartNew={() => void discardAndStartWorkout()}
+          visible={pendingStart !== null}
+        />
       </View>
     </SafeAreaView>
+  );
+}
+
+function ActiveWorkoutWarningModal({
+  visible,
+  activeWorkoutName,
+  isBusy,
+  onStartNew,
+  onResume,
+  onClose,
+}: {
+  visible: boolean;
+  activeWorkoutName: string;
+  isBusy: boolean;
+  onStartNew: () => void;
+  onResume: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
+      <Pressable accessibilityRole="button" onPress={onClose} style={styles.warningBackdrop}>
+        <Pressable onPress={(event) => event.stopPropagation()} style={styles.warningCard}>
+          <Text style={styles.warningEmoji}>🤔</Text>
+          <Text style={styles.warningTitle}>Workout in Progress</Text>
+          <Text style={styles.warningMessage}>
+            {activeWorkoutName} is already running. Starting a new workout will cancel your current workout.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isBusy}
+            onPress={onStartNew}
+            style={[styles.warningAction, styles.destructiveAction]}>
+            <Text style={styles.destructiveLabel}>{isBusy ? 'STARTING...' : 'START NEW WORKOUT'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onResume} style={styles.warningAction}>
+            <Text style={styles.warningActionLabel}>RESUME CURRENT WORKOUT</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onClose} style={styles.warningAction}>
+            <Text style={styles.warningActionLabel}>DO NOTHING</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -311,6 +436,16 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '700',
   },
+  buttonDisabled: { opacity: 0.55 },
+  inlineError: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    color: '#FCA5A5',
+    fontSize: 12,
+    lineHeight: 17,
+  },
   templatesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -375,4 +510,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  warningBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
+  },
+  warningCard: {
+    width: '100%',
+    maxWidth: 390,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: SetForgeColors.border,
+    borderRadius: 15,
+    backgroundColor: SetForgeColors.surfaceMuted,
+  },
+  warningEmoji: { fontSize: 38, textAlign: 'center' },
+  warningTitle: {
+    marginTop: 12,
+    color: SetForgeColors.textPrimary,
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  warningMessage: {
+    marginTop: 12,
+    marginBottom: 22,
+    color: SetForgeColors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  warningAction: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    borderRadius: 7,
+    backgroundColor: SetForgeColors.surface,
+  },
+  destructiveAction: { marginTop: 0, backgroundColor: '#FF5964' },
+  destructiveLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
+  warningActionLabel: { color: SetForgeColors.textPrimary, fontSize: 12, fontWeight: '800' },
 });

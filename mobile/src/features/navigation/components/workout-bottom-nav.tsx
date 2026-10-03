@@ -21,7 +21,7 @@ type NavigationItem = {
 
 const items: NavigationItem[] = [
   { label: 'Home', icon: homeIcon },
-  { label: 'History', icon: historyIcon },
+  { label: 'History', icon: historyIcon, href: '/history' },
   { label: 'Start', icon: startIcon, href: '/start-workout' },
   { label: 'Exercises', icon: exercisesIcon, href: '/exercises' },
   { label: 'Profile', icon: profileIcon },
