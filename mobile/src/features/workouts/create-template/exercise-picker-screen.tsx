@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
+import { ExerciseBodyPartFilter } from '@/features/exercises/exercise-body-part-filter';
+import {
+  filterExercises,
+  groupExercisesAlphabetically,
+  type ExerciseBodyPart,
+} from '@/features/exercises/exercise-library-utils';
 import { useCreateTemplateDraft } from '@/features/workouts/create-template/create-template-draft-context';
 import type { Exercise } from '@/models/exercise';
 import { getExerciseAssetUrl, getExercises } from '@/services/exercise-api';
@@ -27,6 +33,7 @@ export function ExercisePicker({ existingExerciseIds, onAddExercises }: Exercise
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const [query, setQuery] = useState('');
+  const [bodyPart, setBodyPart] = useState<ExerciseBodyPart>('Any Body Part');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const existingIds = useMemo(
@@ -73,18 +80,13 @@ export function ExercisePicker({ existingExerciseIds, onAddExercises }: Exercise
   }, []);
 
   const filteredExercises = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    return filterExercises(exercises, query, bodyPart);
+  }, [bodyPart, exercises, query]);
 
-    if (!normalizedQuery) {
-      return exercises;
-    }
-
-    return exercises.filter((exercise) =>
-      [exercise.name, exercise.primaryMuscle, exercise.bodyPart, exercise.equipment].some((value) =>
-        value?.toLowerCase().includes(normalizedQuery),
-      ),
-    );
-  }, [exercises, query]);
+  const sections = useMemo(
+    () => groupExercisesAlphabetically(filteredExercises),
+    [filteredExercises],
+  );
 
   const toggleExercise = (exerciseId: number) => {
     if (existingIds.has(exerciseId)) {
@@ -144,14 +146,19 @@ export function ExercisePicker({ existingExerciseIds, onAddExercises }: Exercise
           />
         </View>
 
+        <View style={styles.filtersRow}>
+          <ExerciseBodyPartFilter onChange={setBodyPart} value={bodyPart} />
+          <Text style={styles.resultCount}>{filteredExercises.length} exercises</Text>
+        </View>
+
         {isLoading ? (
           <PickerState loading title="Loading exercises..." />
         ) : error ? (
           <PickerState message={error} onRetry={loadExercises} title="Could not load exercises" />
         ) : (
-          <FlatList
+          <SectionList
             contentContainerStyle={styles.listContent}
-            data={filteredExercises}
+            sections={sections}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             keyboardShouldPersistTaps="handled"
             keyExtractor={(exercise) => exercise.id.toString()}
@@ -169,6 +176,12 @@ export function ExercisePicker({ existingExerciseIds, onAddExercises }: Exercise
                 onPress={() => toggleExercise(item.id)}
               />
             )}
+            renderSectionHeader={({ section }) => (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+              </View>
+            )}
+            stickySectionHeadersEnabled
           />
         )}
       </View>
@@ -286,13 +299,35 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 8, color: SetForgeColors.textSecondary, fontSize: 22 },
   searchInput: { flex: 1, height: '100%', color: SetForgeColors.textPrimary, fontSize: 14 },
-  listContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 30 },
-  separator: { height: 8 },
-  exerciseRow: {
-    minHeight: 76,
+  filtersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    justifyContent: 'space-between',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  resultCount: { color: SetForgeColors.textSecondary, fontSize: 11, fontWeight: '600' },
+  listContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 30 },
+  separator: { height: 6 },
+  sectionHeader: {
+    paddingTop: 8,
+    paddingBottom: 7,
+    backgroundColor: SetForgeColors.canvas,
+    borderBottomWidth: 1,
+    borderBottomColor: SetForgeColors.border,
+  },
+  sectionTitle: {
+    color: SetForgeColors.textSecondary,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
+  },
+  exerciseRow: {
+    minHeight: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 6,
     borderWidth: 1,
     borderColor: SetForgeColors.border,
     borderRadius: 7,
@@ -302,8 +337,8 @@ const styles = StyleSheet.create({
   exerciseRowDisabled: { opacity: 0.48 },
   exerciseRowPressed: { opacity: 0.7 },
   thumbnailContainer: {
-    width: 58,
-    height: 58,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -312,7 +347,7 @@ const styles = StyleSheet.create({
   },
   thumbnail: { width: '100%', height: '100%' },
   thumbnailFallback: { color: SetForgeColors.canvas, fontSize: 20, fontWeight: '800' },
-  exerciseText: { flex: 1, gap: 4, paddingHorizontal: 11 },
+  exerciseText: { flex: 1, gap: 3, paddingHorizontal: 10 },
   exerciseName: {
     color: SetForgeColors.textPrimary,
     fontSize: 14,

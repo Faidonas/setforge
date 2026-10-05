@@ -1,6 +1,8 @@
 package com.fazariadis.strengthcoach.service;
 
 import com.fazariadis.strengthcoach.dto.CompleteWorkoutSessionRequest;
+import com.fazariadis.strengthcoach.dto.PreviousExercisePerformanceResponse;
+import com.fazariadis.strengthcoach.dto.PreviousExerciseSetResponse;
 import com.fazariadis.strengthcoach.dto.StartWorkoutSessionRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutSessionRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutSessionExerciseRequest;
@@ -138,6 +140,50 @@ public class WorkoutSessionService {
                 .toList();
     }
 
+	@Transactional(readOnly = true)
+	public List<PreviousExercisePerformanceResponse> getPreviousPerformances(
+			Long userId, List<Long> exerciseIds) {
+		if (!userRepository.existsById(userId)) {
+			throw new ResourceNotFoundException("User " + userId + " was not found");
+		}
+		return exerciseIds.stream()
+				.distinct()
+				.map(exerciseId -> findPreviousPerformance(userId, exerciseId))
+				.filter(java.util.Objects::nonNull)
+				.toList();
+	}
+
+	private PreviousExercisePerformanceResponse findPreviousPerformance(
+			Long userId, Long exerciseId) {
+		List<WorkoutSessionExercise> previousExercises = workoutSessionExerciseRepository
+				.findAllByWorkoutSession_User_IdAndWorkoutSession_StatusAndExercise_IdOrderByWorkoutSession_CompletedAtDesc(
+						userId, WorkoutSessionStatus.COMPLETED, exerciseId);
+		for (WorkoutSessionExercise previousExercise : previousExercises) {
+			List<WorkoutSet> completedSets = workoutSetRepository
+					.findAllBySessionExercise_IdOrderByPositionAsc(previousExercise.getId())
+					.stream()
+					.filter(WorkoutSet::isCompleted)
+					.toList();
+			if (!completedSets.isEmpty()) {
+				return PreviousExercisePerformanceResponse.builder()
+						.exerciseId(exerciseId)
+						.workoutSessionId(previousExercise.getWorkoutSession().getId())
+						.performedAt(previousExercise.getWorkoutSession().getCompletedAt())
+						.sets(completedSets.stream()
+								.map(set -> PreviousExerciseSetResponse.builder()
+										.position(set.getPosition())
+										.setType(set.getSetType())
+										.reps(set.getReps())
+										.weight(set.getWeight())
+										.timeSeconds(set.getTimeSeconds())
+										.build())
+								.toList())
+						.build();
+			}
+		}
+		return null;
+	}
+
     @Transactional
     public WorkoutSessionResponse complete(
             Long sessionId, CompleteWorkoutSessionRequest request) {
@@ -184,12 +230,17 @@ public class WorkoutSessionService {
 	}
 
     @Transactional
-    public WorkoutSessionResponse cancel(Long sessionId) {
-        WorkoutSession session = requireInProgress(sessionId);
-        session.setStatus(WorkoutSessionStatus.CANCELLED);
-        session.setCompletedAt(Instant.now());
-        workoutSessionRepository.saveAndFlush(session);
-        return loadResponse(session);
+    public void cancel(Long sessionId) {
+        WorkoutSession session = workoutSessionRepository.findById(sessionId).orElse(null);
+        if (session == null) {
+            return;
+        }
+        if (session.getStatus() != WorkoutSessionStatus.IN_PROGRESS) {
+            throw new InvalidRequestException(
+                    "Workout session " + sessionId + " is already "
+                            + session.getStatus().name().toLowerCase());
+        }
+        workoutSessionRepository.delete(session);
     }
 
     private WorkoutSession requireInProgress(Long sessionId) {

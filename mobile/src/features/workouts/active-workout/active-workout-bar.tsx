@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -6,8 +5,7 @@ import { SetForgeColors } from '@/constants/setforge-theme';
 import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 
 export function ActiveWorkoutBar() {
-  const router = useRouter();
-  const { session } = useActiveWorkout();
+  const { session, expand } = useActiveWorkout();
   const [now, setNow] = useState(0);
 
   useEffect(() => {
@@ -17,17 +15,15 @@ export function ActiveWorkoutBar() {
   }, [session]);
 
   const openWorkout = useCallback(() => {
-    if (session) {
-      router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
-    }
-  }, [router, session]);
+    if (session) expand();
+  }, [expand, session]);
 
   const panResponder = useMemo(
     () => PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dy) > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        gesture.dy < -5 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy < -16) openWorkout();
+        if (gesture.dy < -10 || gesture.vy < -0.25) openWorkout();
       },
     }),
     [openWorkout],

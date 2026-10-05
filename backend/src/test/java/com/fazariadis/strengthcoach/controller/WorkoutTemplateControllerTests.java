@@ -7,11 +7,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fazariadis.strengthcoach.dto.CreateWorkoutTemplateRequest;
+import com.fazariadis.strengthcoach.dto.ReorderWorkoutTemplatesRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateExerciseResponse;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateSetResponse;
@@ -138,5 +140,17 @@ class WorkoutTemplateControllerTests {
 				.andExpect(status().isNoContent());
 
 		verify(workoutTemplateService).delete(12L);
+	}
+
+	@Test
+	void savesTemplateDisplayOrder() throws Exception {
+		mockMvc.perform(put("/api/workout-templates/order")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{"ownerId": 1, "templateIds": [30, 10, 20]}
+							"""))
+				.andExpect(status().isNoContent());
+
+		verify(workoutTemplateService).reorder(any(ReorderWorkoutTemplatesRequest.class));
 	}
 }

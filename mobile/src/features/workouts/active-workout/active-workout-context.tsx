@@ -45,8 +45,12 @@ type EditableSetField =
 type ActiveWorkoutContextValue = {
   session: WorkoutSession | null;
   exercises: ActiveExercise[];
+  isExpanded: boolean;
+  expand: () => void;
+  collapse: () => void;
   loadSession: (session: WorkoutSession) => void;
   addExercises: (exercises: Exercise[]) => void;
+  moveExercise: (fromIndex: number, toIndex: number) => void;
   addSet: (exerciseClientId: string) => void;
   removeExercise: (exerciseClientId: string) => void;
   removeSet: (exerciseClientId: string, setClientId: string) => void;
@@ -102,6 +106,7 @@ function newActiveExercise(exercise: Exercise): ActiveExercise {
 export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ActiveExercise[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
   const [hydrationError, setHydrationError] = useState<string | null>(null);
 
@@ -220,6 +225,17 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
     setExercises((current) => current.filter(({ clientId: id }) => id !== exerciseClientId));
   }, []);
 
+  const moveExercise = useCallback((fromIndex: number, toIndex: number) => {
+    setExercises((current) => {
+      if (fromIndex === toIndex) return current;
+      const reordered = [...current];
+      const [movedExercise] = reordered.splice(fromIndex, 1);
+      if (!movedExercise) return current;
+      reordered.splice(toIndex, 0, movedExercise);
+      return reordered;
+    });
+  }, []);
+
   const removeSet = useCallback((exerciseClientId: string, setClientId: string) => {
     setExercises((current) =>
       current.map((exercise) =>
@@ -269,16 +285,24 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
   }, [exercises]);
 
   const reset = useCallback(() => {
+    setIsExpanded(false);
     setSession(null);
     setExercises([]);
   }, []);
+
+  const expand = useCallback(() => setIsExpanded(true), []);
+  const collapse = useCallback(() => setIsExpanded(false), []);
 
   const value = useMemo(
     () => ({
       session,
       exercises,
+      isExpanded,
+      expand,
+      collapse,
       loadSession,
       addExercises,
+      moveExercise,
       addSet,
       removeExercise,
       removeSet,
@@ -292,8 +316,12 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
     [
       addExercises,
       addSet,
+      collapse,
       exercises,
+      expand,
+      isExpanded,
       loadSession,
+      moveExercise,
       removeExercise,
       removeSet,
       reset,

@@ -1,6 +1,6 @@
 import type { ExerciseType, WorkoutSetType } from '@/models/workout-template';
 
-export type WorkoutSessionStatus = 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type WorkoutSessionStatus = 'IN_PROGRESS' | 'COMPLETED';
 
 export type WorkoutSet = {
   id: number;
@@ -76,4 +76,19 @@ export type CompleteWorkoutSessionRequest = {
 
 export type UpdateWorkoutSessionRequest = CompleteWorkoutSessionRequest & {
   name: string;
+};
+
+export type PreviousExerciseSet = {
+  position: number;
+  setType: WorkoutSetType;
+  reps?: number;
+  weight?: number;
+  timeSeconds?: number;
+};
+
+export type PreviousExercisePerformance = {
+  exerciseId: number;
+  workoutSessionId: number;
+  performedAt: string;
+  sets: PreviousExerciseSet[];
 };

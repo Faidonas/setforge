@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -7,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RestTimerControl, formatRestTime } from '@/components/rest-timer-control';
+import { ReorderableExerciseList } from '@/components/reorderable-exercise-list';
+import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import {
   type DraftExercise,
@@ -22,9 +23,13 @@ import {
   useCreateTemplateDraft,
 } from '@/features/workouts/create-template/create-template-draft-context';
 import { toWorkoutTemplateExerciseRequests } from '@/features/workouts/create-template/draft-to-request';
+import {
+  formatPreviousResult,
+  previousSetAt,
+  usePreviousPerformances,
+} from '@/features/workouts/previous-performance';
+import type { PreviousExercisePerformance } from '@/models/workout-session';
 import { getWorkoutTemplate, updateWorkoutTemplate } from '@/services/workout-template-api';
-
-const moreIcon = require('@/assets/images/figma/more-horizontal.svg');
 
 export default function EditTemplateScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,6 +40,10 @@ export default function EditTemplateScreen() {
   const [isLoading, setIsLoading] = useState(sourceTemplateId !== templateId);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const previousPerformances = usePreviousPerformances(
+    DEVELOPMENT_USER_ID,
+    draft.exercises.map(({ exercise }) => exercise.id),
+  );
 
   useEffect(() => {
     if (!Number.isInteger(templateId) || templateId <= 0 || sourceTemplateId === templateId) {
@@ -135,28 +144,22 @@ export default function EditTemplateScreen() {
             </Pressable>
           </View>
 
-          <ScrollView
+          <ReorderableExerciseList
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
-            {draft.exercises.map((draftExercise, index) => (
-              <ExpandedExercise
-                draftExercise={draftExercise}
-                exerciseNumber={index + 1}
-                key={draftExercise.clientId}
-              />
-            ))}
-
-            {draft.exercises.length === 0 && (
+            data={draft.exercises}
+            getExerciseMeta={({ exercise }) => `${exercise.primaryMuscle} · ${exercise.equipment}`}
+            getExerciseName={({ exercise }) => exercise.name}
+            keyExtractor={(item) => item.clientId}
+            onMove={draft.moveExercise}
+            emptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>No exercises in this template</Text>
                 <Text style={styles.emptyMessage}>Add an exercise to start rebuilding the plan.</Text>
               </View>
-            )}
-
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
-            <View style={styles.globalActions}>
+            }
+            footerComponent={<>
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              <View style={styles.globalActions}>
               <Pressable
                 accessibilityRole="button"
                 onPress={() =>
@@ -168,8 +171,18 @@ export default function EditTemplateScreen() {
                 style={styles.addExerciseButton}>
                 <Text style={styles.addExerciseLabel}>+ ADD EXERCISE</Text>
               </Pressable>
-            </View>
-          </ScrollView>
+              </View>
+            </>}
+            renderExpandedItem={({ drag, index, isActive, item }) => (
+              <ExpandedExercise
+                draftExercise={item}
+                exerciseNumber={index + 1}
+                isDragging={isActive}
+                onLongPressDrag={drag}
+                previousPerformance={previousPerformances.get(item.exercise.id)}
+              />
+            )}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -179,9 +192,15 @@ export default function EditTemplateScreen() {
 function ExpandedExercise({
   draftExercise,
   exerciseNumber,
+  isDragging,
+  onLongPressDrag,
+  previousPerformance,
 }: {
   draftExercise: DraftExercise;
   exerciseNumber: number;
+  isDragging: boolean;
+  onLongPressDrag: () => void;
+  previousPerformance?: PreviousExercisePerformance;
 }) {
   const { addSet, removeExercise, removeSet, updateExerciseNotes, updateSet } =
     useCreateTemplateDraft();
@@ -203,22 +222,31 @@ function ExpandedExercise({
   };
 
   return (
-    <View style={styles.exerciseBlock}>
+    <View style={[styles.exerciseBlock, isDragging && styles.draggingExerciseBlock]}>
       <View style={styles.exerciseTitleRow}>
-        <View style={styles.exerciseHeading}>
+        <Pressable delayLongPress={300} onLongPress={onLongPressDrag} style={styles.exerciseHeading}>
           <Text style={styles.exerciseName}>
             {exerciseNumber}. {draftExercise.exercise.name}
           </Text>
           <Text style={styles.exerciseMeta}>
             {draftExercise.exercise.primaryMuscle} · {draftExercise.exercise.equipment}
           </Text>
-        </View>
+        </Pressable>
         <Pressable
-          accessibilityLabel={`Options for ${draftExercise.exercise.name}`}
+          accessibilityLabel={`Hold and drag to reorder ${draftExercise.exercise.name}`}
+          accessibilityRole="button"
+          delayLongPress={300}
+          onLongPress={onLongPressDrag}
+          style={styles.dragHandle}>
+          <Text style={styles.dragHandleIcon}>≡</Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={`Remove ${draftExercise.exercise.name}`}
           accessibilityRole="button"
           hitSlop={10}
-          onPress={confirmRemoveExercise}>
-          <Image contentFit="contain" source={moreIcon} style={styles.moreIcon} />
+          onPress={confirmRemoveExercise}
+          style={styles.removeExerciseButton}>
+          <Text style={styles.removeExerciseIcon}>×</Text>
         </Pressable>
       </View>
 
@@ -233,25 +261,30 @@ function ExpandedExercise({
       />
 
       <SetHeader isTimed={isTimed} />
-      {draftExercise.sets.map((set, index) => (
-        <EditableSetRow
-          canRemove={draftExercise.sets.length > 1}
-          index={index}
-          isTimed={isTimed}
-          key={set.clientId}
-          onRemove={() => removeSet(draftExercise.clientId, set.clientId)}
-          onUpdate={(field, value) =>
-            updateSet(draftExercise.clientId, set.clientId, field, value)
-          }
-          set={set}
-        />
-      ))}
+      <View>
+        {draftExercise.sets.map((set, index) => (
+          <EditableSetRow
+            canRemove={draftExercise.sets.length > 1}
+            index={index}
+            isTimed={isTimed}
+            key={set.clientId}
+            previousPerformance={previousPerformance}
+            onRemove={() => removeSet(draftExercise.clientId, set.clientId)}
+            onUpdate={(field, value) =>
+              updateSet(draftExercise.clientId, set.clientId, field, value)
+            }
+            set={set}
+          />
+        ))}
+      </View>
 
       <Pressable
         accessibilityRole="button"
         onPress={() => addSet(draftExercise.clientId)}
         style={styles.addSetButton}>
-        <Text style={styles.addSetLabel}>+ ADD SET</Text>
+        <Text style={styles.addSetLabel}>
+          + ADD SET ({formatRestTime(draftExercise.sets.at(-1)?.restSeconds)})
+        </Text>
       </Pressable>
     </View>
   );
@@ -260,10 +293,18 @@ function ExpandedExercise({
 function SetHeader({ isTimed }: { isTimed: boolean }) {
   return (
     <View style={styles.setHeader}>
-      <Text style={[styles.columnLabel, styles.setNumberColumn]}>SET</Text>
-      {!isTimed && <Text style={styles.columnLabel}>KG</Text>}
-      <Text style={styles.columnLabel}>{isTimed ? 'TIME (SEC)' : 'REPS'}</Text>
-      <Text style={styles.columnLabel}>REST (SEC)</Text>
+      <Text style={[styles.columnLabel, styles.setNumberColumn]}>Set</Text>
+      <View style={styles.previousColumn}>
+        <Text style={styles.columnLabel}>Previous</Text>
+      </View>
+      {!isTimed && (
+        <View style={styles.metricColumn}>
+          <Text style={styles.columnLabel}>kg</Text>
+        </View>
+      )}
+      <View style={styles.metricColumn}>
+        <Text style={styles.columnLabel}>{isTimed ? 'Time' : 'Reps'}</Text>
+      </View>
       <View style={styles.removeColumn} />
     </View>
   );
@@ -274,6 +315,7 @@ type EditableSetRowProps = {
   index: number;
   isTimed: boolean;
   canRemove: boolean;
+  previousPerformance?: PreviousExercisePerformance;
   onRemove: () => void;
   onUpdate: (
     field: 'targetReps' | 'targetWeight' | 'targetTimeSeconds' | 'restSeconds',
@@ -286,45 +328,51 @@ function EditableSetRow({
   index,
   isTimed,
   canRemove,
+  previousPerformance,
   onRemove,
   onUpdate,
 }: EditableSetRowProps) {
   return (
-    <View style={styles.setRow}>
-      <View style={[styles.setNumber, styles.setNumberColumn]}>
-        <Text style={styles.setNumberText}>{formatSetLabel(set, index)}</Text>
-      </View>
-      {!isTimed && (
+    <View style={styles.setGroup}>
+      <View style={styles.setRow}>
+        <View style={[styles.setNumber, styles.setNumberColumn]}>
+          <Text style={styles.setNumberText}>{formatSetLabel(set, index)}</Text>
+        </View>
+        <View style={styles.previousColumn}>
+          <Text numberOfLines={1} style={styles.previousValue}>
+            {formatPreviousResult(previousSetAt(previousPerformance, index), isTimed ? 'TIMED' : 'WEIGHT_AND_REPS')}
+          </Text>
+        </View>
+        {!isTimed && (
+          <SetInput
+            accessibilityLabel={`Set ${index + 1} weight in kilograms`}
+            onChangeText={(value) => onUpdate('targetWeight', value)}
+            placeholder="—"
+            value={set.targetWeight}
+          />
+        )}
         <SetInput
-          accessibilityLabel={`Set ${index + 1} weight in kilograms`}
-          onChangeText={(value) => onUpdate('targetWeight', value)}
-          placeholder="—"
-          value={set.targetWeight}
+          accessibilityLabel={`Set ${index + 1} ${isTimed ? 'time in seconds' : 'repetitions'}`}
+          onChangeText={(value) =>
+            onUpdate(isTimed ? 'targetTimeSeconds' : 'targetReps', value)
+          }
+          placeholder={isTimed ? '30' : '10'}
+          value={isTimed ? set.targetTimeSeconds : set.targetReps}
         />
-      )}
-      <SetInput
-        accessibilityLabel={`Set ${index + 1} ${isTimed ? 'time in seconds' : 'repetitions'}`}
-        onChangeText={(value) =>
-          onUpdate(isTimed ? 'targetTimeSeconds' : 'targetReps', value)
-        }
-        placeholder={isTimed ? '30' : '10'}
-        value={isTimed ? set.targetTimeSeconds : set.targetReps}
-      />
-      <SetInput
-        accessibilityLabel={`Set ${index + 1} rest in seconds`}
-        onChangeText={(value) => onUpdate('restSeconds', value)}
-        placeholder="90"
+        <Pressable
+          accessibilityLabel={`Remove set ${index + 1}`}
+          accessibilityRole="button"
+          disabled={!canRemove}
+          hitSlop={6}
+          onPress={onRemove}
+          style={styles.removeColumn}>
+          <TrashIcon disabled={!canRemove} />
+        </Pressable>
+      </View>
+      <RestTimerControl
+        onChange={(value) => onUpdate('restSeconds', value)}
         value={set.restSeconds}
       />
-      <Pressable
-        accessibilityLabel={`Remove set ${index + 1}`}
-        accessibilityRole="button"
-        disabled={!canRemove}
-        hitSlop={6}
-        onPress={onRemove}
-        style={styles.removeColumn}>
-        <TrashIcon disabled={!canRemove} />
-      </Pressable>
     </View>
   );
 }
@@ -354,17 +402,19 @@ function SetInput({
   onChangeText: (value: string) => void;
 }) {
   return (
-    <TextInput
-      accessibilityLabel={accessibilityLabel}
-      keyboardType="decimal-pad"
-      maxLength={7}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={SetForgeColors.textDisabled}
-      selectTextOnFocus
-      style={styles.setInput}
-      value={value}
-    />
+    <View style={styles.metricColumn}>
+      <TextInput
+        accessibilityLabel={accessibilityLabel}
+        keyboardType="decimal-pad"
+        maxLength={7}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={SetForgeColors.textDisabled}
+        selectTextOnFocus
+        style={styles.setInput}
+        value={value}
+      />
+    </View>
   );
 }
 
@@ -441,19 +491,27 @@ const styles = StyleSheet.create({
   saveLabel: { color: SetForgeColors.canvas, fontSize: 12, fontWeight: '900' },
   content: { paddingBottom: 44 },
   exerciseBlock: {
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 16,
+    gap: 9,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: SetForgeColors.border,
   },
-  exerciseTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  exerciseHeading: { flex: 1, gap: 4 },
+  draggingExerciseBlock: { backgroundColor: SetForgeColors.surfaceMuted },
+  exerciseTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  exerciseHeading: { flex: 1, gap: 2 },
+  dragHandle: {
+    width: 32,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dragHandleIcon: { color: SetForgeColors.textSecondary, fontSize: 23, lineHeight: 25 },
   exerciseName: {
     color: SetForgeColors.textPrimary,
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: '800',
     textTransform: 'capitalize',
   },
@@ -463,60 +521,75 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     textTransform: 'capitalize',
   },
-  moreIcon: { width: 18, height: 18, marginTop: 3 },
+  removeExerciseButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.5)',
+    borderRadius: 14,
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+  },
+  removeExerciseIcon: { color: '#F87171', fontSize: 21, lineHeight: 23, fontWeight: '500' },
   notesInput: {
-    minHeight: 38,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
+    minHeight: 34,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderWidth: 1,
     borderColor: SetForgeColors.border,
     borderRadius: 6,
     backgroundColor: SetForgeColors.surface,
     color: SetForgeColors.textPrimary,
-    fontSize: 12,
+    fontSize: 13,
   },
-  setHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  setHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   columnLabel: {
-    flex: 1,
     color: SetForgeColors.textDisabled,
-    fontFamily: 'monospace',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',
   },
-  setNumberColumn: { width: 44, flexGrow: 0, flexShrink: 0 },
-  setRow: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  setNumberColumn: { width: 34, flexGrow: 0, flexShrink: 0 },
+  previousColumn: { flex: 1.45, minWidth: 0 },
+  metricColumn: { flex: 0.85, minWidth: 0 },
+  previousValue: {
+    color: SetForgeColors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  setGroup: { marginBottom: 0 },
+  setRow: { height: 36, flexDirection: 'row', alignItems: 'center', gap: 6 },
   setNumber: {
-    height: 48,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(0, 240, 255, 0.2)',
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: 'rgba(0, 240, 255, 0.05)',
   },
   setNumberText: {
     color: SetForgeColors.accent,
     fontFamily: 'monospace',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
   },
   setInput: {
-    flex: 1,
-    minWidth: 0,
-    height: 48,
-    paddingHorizontal: 5,
+    width: '100%',
+    height: 36,
+    paddingHorizontal: 4,
     borderWidth: 1,
     borderColor: SetForgeColors.border,
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: SetForgeColors.surface,
     color: SetForgeColors.textPrimary,
     fontFamily: 'monospace',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
   },
-  removeColumn: { width: 24, alignItems: 'center', justifyContent: 'center' },
+  removeColumn: { width: 26, alignItems: 'center', justifyContent: 'center' },
   trashIcon: { width: 16, height: 18, alignItems: 'center' },
   trashIconDisabled: { opacity: 0.25 },
   trashHandle: {
@@ -550,11 +623,19 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: SetForgeColors.textSecondary,
   },
-  addSetButton: { alignSelf: 'flex-start', paddingVertical: 4 },
+  addSetButton: {
+    width: '100%',
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    borderRadius: 6,
+    backgroundColor: SetForgeColors.surfaceMuted,
+  },
   addSetLabel: {
-    color: SetForgeColors.accent,
+    color: SetForgeColors.textPrimary,
     fontFamily: 'monospace',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   globalActions: { padding: 20 },

@@ -18,7 +18,7 @@ public class ExerciseService {
 
 	@Transactional(readOnly = true)
 	public List<ExerciseResponse> getAllExercises() {
-		return exerciseRepository.findAllByOrderByNameAsc().stream()
+		return exerciseRepository.findAllByCatalogVisibleTrueOrderByNameAsc().stream()
 				.map(exerciseMapper::toResponse)
 				.toList();
 	}

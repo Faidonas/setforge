@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fazariadis.strengthcoach.dto.StartWorkoutSessionRequest;
+import com.fazariadis.strengthcoach.dto.PreviousExercisePerformanceResponse;
 import com.fazariadis.strengthcoach.dto.WorkoutSessionResponse;
 import com.fazariadis.strengthcoach.entity.Exercise;
 import com.fazariadis.strengthcoach.entity.User;
@@ -30,6 +31,7 @@ import com.fazariadis.strengthcoach.repository.WorkoutTemplateExerciseRepository
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateSetRepository;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -78,6 +80,29 @@ class WorkoutSessionServiceTests {
 				.isInstanceOf(InvalidRequestException.class)
 				.hasMessage("User 1 already has workout session 40 in progress");
 		verify(sessionRepository, never()).saveAndFlush(any(WorkoutSession.class));
+	}
+
+	@Test
+	void cancellingAnActiveWorkoutPermanentlyDeletesIt() {
+		WorkoutSession activeSession = WorkoutSession.builder()
+				.id(40L)
+				.status(WorkoutSessionStatus.IN_PROGRESS)
+				.build();
+		when(sessionRepository.findById(40L)).thenReturn(Optional.of(activeSession));
+
+		service.cancel(40L);
+
+		verify(sessionRepository).delete(activeSession);
+		verify(sessionRepository, never()).saveAndFlush(activeSession);
+	}
+
+	@Test
+	void cancellingAnAlreadyRemovedWorkoutIsSuccessful() {
+		when(sessionRepository.findById(40L)).thenReturn(Optional.empty());
+
+		service.cancel(40L);
+
+		verify(sessionRepository, never()).delete(any(WorkoutSession.class));
 	}
 
 	@Test
@@ -165,5 +190,53 @@ class WorkoutSessionServiceTests {
 				.isEqualTo(8);
 		assertThat(response.getExercises().getFirst().getSets().getFirst().getRestSeconds())
 				.isEqualTo(90);
+	}
+
+	@Test
+	void returnsLatestCompletedSetsForAnExercise() {
+		Instant completedAt = Instant.parse("2026-10-02T18:30:00Z");
+		User user = User.builder().id(1L).build();
+		Exercise bench = Exercise.builder().id(10L).name("Bench Press").build();
+		WorkoutSession completedSession = WorkoutSession.builder()
+				.id(40L)
+				.user(user)
+				.status(WorkoutSessionStatus.COMPLETED)
+				.completedAt(completedAt)
+				.build();
+		WorkoutSessionExercise sessionExercise = WorkoutSessionExercise.builder()
+				.id(50L)
+				.workoutSession(completedSession)
+				.exercise(bench)
+				.position(0)
+				.build();
+		WorkoutSet completedSet = WorkoutSet.builder()
+				.id(60L)
+				.sessionExercise(sessionExercise)
+				.position(0)
+				.reps(8)
+				.weight(new BigDecimal("75.00"))
+				.completed(true)
+				.completedAt(completedAt)
+				.build();
+
+		when(userRepository.existsById(1L)).thenReturn(true);
+		when(sessionExerciseRepository
+				.findAllByWorkoutSession_User_IdAndWorkoutSession_StatusAndExercise_IdOrderByWorkoutSession_CompletedAtDesc(
+						1L, WorkoutSessionStatus.COMPLETED, 10L))
+				.thenReturn(List.of(sessionExercise));
+		when(workoutSetRepository.findAllBySessionExercise_IdOrderByPositionAsc(50L))
+				.thenReturn(List.of(completedSet));
+
+		List<PreviousExercisePerformanceResponse> response =
+				service.getPreviousPerformances(1L, List.of(10L));
+
+		assertThat(response).hasSize(1);
+		assertThat(response.getFirst().getExerciseId()).isEqualTo(10L);
+		assertThat(response.getFirst().getWorkoutSessionId()).isEqualTo(40L);
+		assertThat(response.getFirst().getPerformedAt()).isEqualTo(completedAt);
+		assertThat(response.getFirst().getSets()).hasSize(1);
+		assertThat(response.getFirst().getSets().getFirst().getWeight())
+				.isEqualByComparingTo("75.00");
+		assertThat(response.getFirst().getSets().getFirst().getReps()).isEqualTo(8);
 	}
 }

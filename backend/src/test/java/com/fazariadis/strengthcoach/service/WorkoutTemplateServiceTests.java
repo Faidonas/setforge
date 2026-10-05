@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fazariadis.strengthcoach.dto.CreateWorkoutTemplateRequest;
+import com.fazariadis.strengthcoach.dto.ReorderWorkoutTemplatesRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutTemplateRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateExerciseRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
@@ -146,6 +147,7 @@ class WorkoutTemplateServiceTests {
 		WorkoutTemplateResponse response = service.create(request);
 
 		assertThat(response.getName()).isEqualTo("Full Body");
+		assertThat(response.getPosition()).isZero();
 		assertThat(response.getExercises()).extracting("position").containsExactly(0, 1, 2);
 		assertThat(response.getExercises().getFirst().getSets())
 				.extracting("position")
@@ -158,6 +160,24 @@ class WorkoutTemplateServiceTests {
 		assertThat(response.getExercises().get(2).getExerciseType()).isEqualTo(ExerciseType.TIMED);
 		assertThat(response.getExercises().get(2).getSets().getFirst().getTargetTimeSeconds())
 				.isEqualTo(45);
+	}
+
+	@Test
+	void rejectsDuplicateTemplateNameForOwnerIgnoringCase() {
+		User owner = User.builder().id(1L).build();
+		when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+		when(templateRepository.existsByOwner_IdAndNameIgnoreCase(1L, "Upper A"))
+				.thenReturn(true);
+		CreateWorkoutTemplateRequest request = CreateWorkoutTemplateRequest.builder()
+				.ownerId(1L)
+				.name(" Upper A ")
+				.exercises(List.of())
+				.build();
+
+		assertThatThrownBy(() -> service.create(request))
+				.isInstanceOf(InvalidRequestException.class)
+				.hasMessage("Workout template name 'Upper A' is already in use for this user");
+		verify(templateRepository, never()).saveAndFlush(any(WorkoutTemplate.class));
 	}
 
 	@Test
@@ -252,6 +272,28 @@ class WorkoutTemplateServiceTests {
 	}
 
 	@Test
+	void rejectsRenameToAnotherTemplateNameForSameOwner() {
+		WorkoutTemplate template = WorkoutTemplate.builder()
+				.id(50L)
+				.owner(User.builder().id(1L).build())
+				.name("Upper A")
+				.build();
+		when(templateRepository.findById(50L)).thenReturn(Optional.of(template));
+		when(templateRepository.existsByOwner_IdAndNameIgnoreCaseAndIdNot(
+				1L, "lower b", 50L)).thenReturn(true);
+
+		UpdateWorkoutTemplateRequest request = UpdateWorkoutTemplateRequest.builder()
+				.name("lower b")
+				.exercises(List.of())
+				.build();
+
+		assertThatThrownBy(() -> service.update(50L, request))
+				.isInstanceOf(InvalidRequestException.class)
+				.hasMessage("Workout template name 'lower b' is already in use for this user");
+		verify(templateRepository, never()).saveAndFlush(any(WorkoutTemplate.class));
+	}
+
+	@Test
 	void deletesExistingTemplate() {
 		WorkoutTemplate template = WorkoutTemplate.builder().id(50L).build();
 		when(templateRepository.findById(50L)).thenReturn(Optional.of(template));
@@ -259,5 +301,43 @@ class WorkoutTemplateServiceTests {
 		service.delete(50L);
 
 		verify(templateRepository).delete(template);
+	}
+
+	@Test
+	void reordersEveryTemplateOwnedByUser() {
+		WorkoutTemplate first = WorkoutTemplate.builder().id(10L).position(0).build();
+		WorkoutTemplate second = WorkoutTemplate.builder().id(20L).position(1).build();
+		WorkoutTemplate third = WorkoutTemplate.builder().id(30L).position(2).build();
+		when(userRepository.existsById(1L)).thenReturn(true);
+		when(templateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(1L))
+				.thenReturn(List.of(first, second, third));
+
+		service.reorder(ReorderWorkoutTemplatesRequest.builder()
+				.ownerId(1L)
+				.templateIds(List.of(30L, 10L, 20L))
+				.build());
+
+		assertThat(third.getPosition()).isZero();
+		assertThat(first.getPosition()).isEqualTo(1);
+		assertThat(second.getPosition()).isEqualTo(2);
+		verify(templateRepository).saveAll(List.of(first, second, third));
+		verify(templateRepository).flush();
+	}
+
+	@Test
+	void rejectsIncompleteTemplateOrder() {
+		when(userRepository.existsById(1L)).thenReturn(true);
+		when(templateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(1L))
+				.thenReturn(List.of(
+						WorkoutTemplate.builder().id(10L).position(0).build(),
+						WorkoutTemplate.builder().id(20L).position(1).build()));
+
+		assertThatThrownBy(() -> service.reorder(ReorderWorkoutTemplatesRequest.builder()
+				.ownerId(1L)
+				.templateIds(List.of(20L))
+				.build()))
+				.isInstanceOf(InvalidRequestException.class)
+				.hasMessageContaining("exactly once");
+		verify(templateRepository, never()).saveAll(any());
 	}
 }

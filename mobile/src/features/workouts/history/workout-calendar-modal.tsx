@@ -1,10 +1,21 @@
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import {
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import type { WorkoutSession } from '@/models/workout-session';
 
 const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const monthRange = 120;
+const initialMonthIndex = monthRange;
 
 export function WorkoutCalendarModal({
   visible,
@@ -17,7 +28,18 @@ export function WorkoutCalendarModal({
   onClose: () => void;
   onSelectWorkout: (workout: WorkoutSession) => void;
 }) {
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const months = useMemo(() => {
+    const currentMonth = startOfMonth(new Date());
+    return Array.from(
+      { length: monthRange * 2 + 1 },
+      (_, index) => addMonths(currentMonth, index - monthRange),
+    );
+  }, []);
+  const [monthIndex, setMonthIndex] = useState(initialMonthIndex);
+  const [calendarWidth, setCalendarWidth] = useState(0);
+  const monthListRef = useRef<FlatList<Date>>(null);
+  const visibleMonthIndexRef = useRef(initialMonthIndex);
+  const month = months[monthIndex];
 
   const workoutsByDate = useMemo(() => {
     const result = new Map<string, WorkoutSession[]>();
@@ -29,12 +51,28 @@ export function WorkoutCalendarModal({
     return result;
   }, [workouts]);
 
-  const days = calendarDays(month);
+  const moveMonth = (amount: number) => {
+    const nextIndex = Math.max(0, Math.min(months.length - 1, monthIndex + amount));
+    setMonthIndex(nextIndex);
+    monthListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+  };
+
+  const trackVisibleMonth = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (calendarWidth === 0) return;
+    const nextIndex = Math.max(
+      0,
+      Math.min(months.length - 1, Math.round(event.nativeEvent.contentOffset.x / calendarWidth)),
+    );
+    if (nextIndex === visibleMonthIndexRef.current) return;
+    visibleMonthIndexRef.current = nextIndex;
+    setMonthIndex(nextIndex);
+  };
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
-      <Pressable onPress={onClose} style={styles.backdrop}>
-        <Pressable onPress={(event) => event.stopPropagation()} style={styles.card}>
+      <View style={styles.backdrop}>
+        <Pressable accessibilityLabel="Close calendar" onPress={onClose} style={styles.backdropDismissArea} />
+        <View style={styles.card}>
           <View style={styles.header}>
             <Pressable accessibilityLabel="Close calendar" hitSlop={10} onPress={onClose} style={styles.headerSide}>
               <Text style={styles.close}>×</Text>
@@ -44,11 +82,11 @@ export function WorkoutCalendarModal({
           </View>
 
           <View style={styles.monthNavigation}>
-            <Pressable accessibilityLabel="Previous month" onPress={() => setMonth(addMonths(month, -1))} style={styles.monthButton}>
+            <Pressable accessibilityLabel="Previous month" onPress={() => moveMonth(-1)} style={styles.monthButton}>
               <Text style={styles.monthButtonLabel}>‹</Text>
             </Pressable>
             <Text style={styles.monthTitle}>{formatMonth(month)}</Text>
-            <Pressable accessibilityLabel="Next month" onPress={() => setMonth(addMonths(month, 1))} style={styles.monthButton}>
+            <Pressable accessibilityLabel="Next month" onPress={() => moveMonth(1)} style={styles.monthButton}>
               <Text style={styles.monthButtonLabel}>›</Text>
             </Pressable>
           </View>
@@ -56,38 +94,100 @@ export function WorkoutCalendarModal({
           <View style={styles.weekHeader}>
             {weekDays.map((day, index) => <Text key={`${day}-${index}`} style={styles.weekDay}>{day}</Text>)}
           </View>
-          <View style={styles.grid}>
-            {days.map((date, index) => {
-              if (!date) return <View key={`empty-${index}`} style={styles.dayCell} />;
-              const dateWorkouts = workoutsByDate.get(dateKey(date)) ?? [];
-              const hasWorkout = dateWorkouts.length > 0;
-              const isToday = dateKey(date) === dateKey(new Date());
-              return (
-                <Pressable
-                  accessibilityLabel={`${formatAccessibleDate(date)}${hasWorkout ? `, ${dateWorkouts.length} workout` : ''}`}
-                  disabled={!hasWorkout}
-                  key={dateKey(date)}
-                  onPress={() => onSelectWorkout(dateWorkouts[0])}
-                  style={[styles.dayCell, hasWorkout && styles.workoutDay, isToday && styles.today]}>
-                  <Text style={[styles.dayNumber, hasWorkout && styles.workoutDayNumber]}>{date.getDate()}</Text>
-                  {hasWorkout && (
-                    <View style={styles.checkBadge}>
-                      <Text style={styles.check}>{dateWorkouts.length > 1 ? dateWorkouts.length : '✓'}</Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
+          <View
+            onLayout={(event) => setCalendarWidth(event.nativeEvent.layout.width)}
+            style={styles.calendarViewport}>
+            {calendarWidth > 0 && (
+              <FlatList
+                bounces={false}
+                data={months}
+                decelerationRate="fast"
+                disableIntervalMomentum
+                directionalLockEnabled
+                extraData={workoutsByDate}
+                getItemLayout={(_, index) => ({
+                  index,
+                  length: calendarWidth,
+                  offset: calendarWidth * index,
+                })}
+                horizontal
+                initialNumToRender={3}
+                initialScrollIndex={initialMonthIndex}
+                keyExtractor={monthKey}
+                maxToRenderPerBatch={3}
+                nestedScrollEnabled
+                onMomentumScrollEnd={trackVisibleMonth}
+                onScroll={trackVisibleMonth}
+                pagingEnabled
+                ref={monthListRef}
+                renderItem={({ item }) => (
+                  <CalendarMonth
+                    month={item}
+                    onSelectWorkout={onSelectWorkout}
+                    width={calendarWidth}
+                    workoutsByDate={workoutsByDate}
+                  />
+                )}
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={calendarWidth}
+                scrollEventThrottle={16}
+                style={styles.calendarScroll}
+                windowSize={5}
+              />
+            )}
           </View>
-          <Text style={styles.hint}>Select a marked day to jump to its workout.</Text>
-        </Pressable>
-      </Pressable>
+          <Text style={styles.hint}>Swipe between months or select a marked workout day.</Text>
+        </View>
+      </View>
     </Modal>
+  );
+}
+
+function CalendarMonth({
+  month,
+  width,
+  workoutsByDate,
+  onSelectWorkout,
+}: {
+  month: Date;
+  width: number;
+  workoutsByDate: Map<string, WorkoutSession[]>;
+  onSelectWorkout: (workout: WorkoutSession) => void;
+}) {
+  return (
+    <View style={[styles.monthPage, { width }]}>
+      {calendarDays(month).map((date, index) => {
+        if (!date) return <View key={`empty-${index}`} style={styles.dayCell} />;
+        const dateWorkouts = workoutsByDate.get(dateKey(date)) ?? [];
+        const hasWorkout = dateWorkouts.length > 0;
+        const isToday = dateKey(date) === dateKey(new Date());
+        return (
+          <Pressable
+            accessibilityLabel={`${formatAccessibleDate(date)}${hasWorkout ? `, ${dateWorkouts.length} workout` : ''}`}
+            disabled={!hasWorkout}
+            key={dateKey(date)}
+            onPress={() => onSelectWorkout(dateWorkouts[0])}
+            style={styles.dayCell}>
+            <View style={[styles.dayMarker, hasWorkout && styles.workoutDay, isToday && styles.today]}>
+              <Text style={[styles.dayNumber, hasWorkout && styles.workoutDayNumber]}>{date.getDate()}</Text>
+              {hasWorkout && (
+                <View style={styles.checkBadge}>
+                  <Text style={styles.check}>
+                    {dateWorkouts.length > 1 ? dateWorkouts.length : '✓'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
 function startOfMonth(date: Date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
 function addMonths(date: Date, amount: number) { return new Date(date.getFullYear(), date.getMonth() + amount, 1); }
+function monthKey(date: Date) { return `${date.getFullYear()}-${date.getMonth()}`; }
 function dateKey(date: Date) { return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
 function formatMonth(date: Date) { return new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(date); }
 function formatAccessibleDate(date: Date) { return new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date); }
@@ -96,12 +196,13 @@ function calendarDays(month: Date): (Date | null)[] {
   const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const result: (Date | null)[] = Array.from({ length: firstOffset }, () => null);
   for (let day = 1; day <= count; day += 1) result.push(new Date(month.getFullYear(), month.getMonth(), day));
-  while (result.length % 7 !== 0) result.push(null);
+  while (result.length < 42) result.push(null);
   return result;
 }
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18, backgroundColor: 'rgba(0, 0, 0, 0.76)' },
+  backdropDismissArea: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   card: { width: '100%', maxWidth: 440, padding: 18, borderWidth: 1, borderColor: SetForgeColors.border, borderRadius: 16, backgroundColor: SetForgeColors.surface },
   header: { height: 42, flexDirection: 'row', alignItems: 'center' },
   headerSide: { width: 42 },
@@ -113,13 +214,16 @@ const styles = StyleSheet.create({
   monthTitle: { color: SetForgeColors.textPrimary, fontSize: 16, fontWeight: '800' },
   weekHeader: { flexDirection: 'row', paddingBottom: 8 },
   weekDay: { width: '14.2857%', color: SetForgeColors.textDisabled, fontFamily: 'monospace', fontSize: 10, fontWeight: '800', textAlign: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999 },
+  calendarViewport: { width: '100%', aspectRatio: 7 / 6, overflow: 'hidden' },
+  calendarScroll: { width: '100%', height: '100%' },
+  monthPage: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell: { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
+  dayMarker: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19 },
   workoutDay: { backgroundColor: SetForgeColors.accentTint },
   today: { borderWidth: 1, borderColor: SetForgeColors.textDisabled },
   dayNumber: { color: SetForgeColors.textSecondary, fontFamily: 'monospace', fontSize: 13 },
   workoutDayNumber: { color: SetForgeColors.textPrimary, fontWeight: '800' },
-  checkBadge: { position: 'absolute', top: 1, right: 1, minWidth: 17, height: 17, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderRadius: 9, backgroundColor: SetForgeColors.accent },
-  check: { color: SetForgeColors.canvas, fontSize: 9, fontWeight: '900' },
+  checkBadge: { position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: SetForgeColors.surface, borderRadius: 9, backgroundColor: SetForgeColors.accent },
+  check: { color: SetForgeColors.canvas, fontSize: 9, lineHeight: 11, fontWeight: '900', textAlign: 'center' },
   hint: { marginTop: 18, color: SetForgeColors.textSecondary, fontSize: 11, textAlign: 'center' },
 });

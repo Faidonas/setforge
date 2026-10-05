@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,11 +13,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
+import type { MenuAnchor } from '@/components/anchored-menu-modal';
 import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 import { WorkoutTemplateActionsModal } from '@/features/workouts/components/workout-template-actions-modal';
 import { WorkoutTemplateCard } from '@/features/workouts/components/workout-template-card';
 import { WorkoutTemplatePreviewModal } from '@/features/workouts/components/workout-template-preview-modal';
+import { ReorderableTemplateGrid } from '@/features/workouts/components/reorderable-template-grid';
 import type {
   CreateWorkoutTemplateExerciseRequest,
   WorkoutTemplate,
@@ -26,12 +28,13 @@ import {
   createWorkoutTemplate,
   deleteWorkoutTemplate,
   getWorkoutTemplates,
+  reorderWorkoutTemplates,
   updateWorkoutTemplate,
 } from '@/services/workout-template-api';
 import { cancelWorkoutSession, startWorkoutSession } from '@/services/workout-session-api';
 
-const moreIcon = require('@/assets/images/figma/more-horizontal.svg');
 const plusIcon = require('@/assets/images/figma/plus.svg');
+const templateKeyExtractor = (template: WorkoutTemplate) => template.id.toString();
 
 export default function StartWorkoutScreen() {
   const router = useRouter();
@@ -41,8 +44,10 @@ export default function StartWorkoutScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplate | null>(null);
   const [actionTemplate, setActionTemplate] = useState<WorkoutTemplate | null>(null);
+  const [actionAnchor, setActionAnchor] = useState<MenuAnchor | null>(null);
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [pendingStart, setPendingStart] = useState<{ template?: WorkoutTemplate } | null>(null);
+  const reorderQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const createWorkout = async (template?: WorkoutTemplate) => {
     const session = await startWorkoutSession({
@@ -50,8 +55,8 @@ export default function StartWorkoutScreen() {
       templateId: template?.id,
     });
     activeWorkout.loadSession(session);
+    activeWorkout.expand();
     setSelectedTemplate(null);
-    router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
   };
 
   const startWorkout = async (template?: WorkoutTemplate) => {
@@ -92,11 +97,8 @@ export default function StartWorkoutScreen() {
   };
 
   const resumeWorkout = () => {
-    const session = activeWorkout.session;
     setPendingStart(null);
-    if (session) {
-      router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
-    }
+    activeWorkout.expand();
   };
 
   const loadTemplates = useCallback(async () => {
@@ -123,10 +125,9 @@ export default function StartWorkoutScreen() {
       exercises: toWriteExercises(actionTemplate),
     });
 
-    setTemplates((currentTemplates) => [
-      updatedTemplate,
-      ...currentTemplates.filter((template) => template.id !== updatedTemplate.id),
-    ]);
+    setTemplates((currentTemplates) => currentTemplates.map((template) =>
+      template.id === updatedTemplate.id ? updatedTemplate : template,
+    ));
     setSelectedTemplate((currentTemplate) =>
       currentTemplate?.id === updatedTemplate.id ? updatedTemplate : currentTemplate,
     );
@@ -145,8 +146,29 @@ export default function StartWorkoutScreen() {
       exercises: toWriteExercises(actionTemplate),
     });
 
-    setTemplates((currentTemplates) => [duplicatedTemplate, ...currentTemplates]);
+    setTemplates((currentTemplates) => [...currentTemplates, duplicatedTemplate]);
   };
+
+  const reorderTemplates = useCallback((orderedTemplates: WorkoutTemplate[]) => {
+    const normalizedTemplates = orderedTemplates.map((template, position) => ({
+      ...template,
+      position,
+    }));
+    setTemplates(normalizedTemplates);
+    setError(null);
+    reorderQueueRef.current = reorderQueueRef.current
+      .catch(() => undefined)
+      .then(() => reorderWorkoutTemplates(
+        DEVELOPMENT_USER_ID,
+        normalizedTemplates.map((template) => template.id),
+      ))
+      .catch((reorderError: unknown) => {
+        setError(
+          reorderError instanceof Error ? reorderError.message : 'Could not save the template order.',
+        );
+        void loadTemplates();
+      });
+  }, [loadTemplates]);
 
   const deleteTemplate = async () => {
     if (!actionTemplate) {
@@ -206,66 +228,65 @@ export default function StartWorkoutScreen() {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.screen}>
-        <FlatList
-          contentContainerStyle={styles.content}
-          data={templates}
-          keyExtractor={(template) => template.id.toString()}
-          renderItem={({ item }) => (
-            <WorkoutTemplateCard
-              onMorePress={() => setActionTemplate(item)}
-              onPress={() => setSelectedTemplate(item)}
-              template={item}
-            />
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Start Workout</Text>
+          </View>
+
+          <View style={styles.quickStart}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isStartingWorkout || activeWorkout.isHydrating}
+              onPress={() => void startWorkout()}
+              style={[
+                styles.primaryButton,
+                (isStartingWorkout || activeWorkout.isHydrating) && styles.buttonDisabled,
+              ]}>
+              <Text style={styles.primaryButtonLabel}>
+                {isStartingWorkout ? 'STARTING...' : 'START EMPTY WORKOUT'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {error && templates.length > 0 && (
+            <Text style={styles.inlineError}>{error}</Text>
           )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListHeaderComponent={
-            <>
-              <View style={styles.header}>
-                <Text style={styles.title}>Start Workout</Text>
-                <Pressable accessibilityLabel="More workout options" hitSlop={8}>
-                  <Image source={moreIcon} style={styles.headerIcon} contentFit="contain" />
-                </Pressable>
-              </View>
 
-              <View style={styles.quickStart}>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={isStartingWorkout || activeWorkout.isHydrating}
-                  onPress={() => void startWorkout()}
-                  style={[
-                    styles.primaryButton,
-                    (isStartingWorkout || activeWorkout.isHydrating) && styles.buttonDisabled,
-                  ]}>
-                  <Text style={styles.primaryButtonLabel}>
-                    {isStartingWorkout ? 'STARTING...' : 'START EMPTY WORKOUT'}
-                  </Text>
-                </Pressable>
-              </View>
+          <View style={styles.templatesHeader}>
+            <Text style={styles.templatesTitle}>MY TEMPLATES ({templates.length})</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/create-template/new')}
+              style={styles.newTemplateButton}>
+              <Image source={plusIcon} style={styles.plusIcon} contentFit="contain" />
+              <Text style={styles.newTemplateLabel}>NEW TEMPLATE</Text>
+            </Pressable>
+          </View>
 
-              {error && templates.length > 0 && (
-                <Text style={styles.inlineError}>{error}</Text>
+          {templates.length > 0 ? (
+            <ReorderableTemplateGrid
+              data={templates}
+              keyExtractor={templateKeyExtractor}
+              onReorder={reorderTemplates}
+              renderItem={(item) => (
+                <WorkoutTemplateCard
+                  onMorePress={(anchor) => {
+                    setActionAnchor(anchor);
+                    setActionTemplate(item);
+                  }}
+                  onPress={() => setSelectedTemplate(item)}
+                  template={item}
+                />
               )}
-
-              <View style={styles.templatesHeader}>
-                <Text style={styles.templatesTitle}>MY TEMPLATES ({templates.length})</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => router.push('/create-template/new')}
-                  style={styles.newTemplateButton}>
-                  <Image source={plusIcon} style={styles.plusIcon} contentFit="contain" />
-                  <Text style={styles.newTemplateLabel}>NEW TEMPLATE</Text>
-                </Pressable>
-              </View>
-            </>
-          }
-          ListEmptyComponent={
+            />
+          ) : (
             <TemplateListState
               error={error}
               isLoading={isLoading}
               onRetry={() => void loadTemplates()}
             />
-          }
-        />
+          )}
+        </ScrollView>
         <WorkoutTemplatePreviewModal
           onClose={() => setSelectedTemplate(null)}
           onEdit={openTemplateEditor}
@@ -274,7 +295,11 @@ export default function StartWorkoutScreen() {
           template={selectedTemplate}
         />
         <WorkoutTemplateActionsModal
-          onClose={() => setActionTemplate(null)}
+          anchor={actionAnchor}
+          onClose={() => {
+            setActionTemplate(null);
+            setActionAnchor(null);
+          }}
           onDelete={deleteTemplate}
           onDuplicate={duplicateTemplate}
           onEdit={editTemplate}
@@ -415,11 +440,6 @@ const styles = StyleSheet.create({
     lineHeight: 31,
     fontWeight: '800',
   },
-  headerIcon: {
-    width: 20,
-    height: 20,
-    margin: 10,
-  },
   quickStart: {
     paddingTop: 20,
   },
@@ -473,9 +493,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '700',
-  },
-  separator: {
-    height: 12,
   },
   stateContainer: {
     minHeight: 180,

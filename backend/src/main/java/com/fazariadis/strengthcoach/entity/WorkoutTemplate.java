@@ -45,6 +45,9 @@ public class WorkoutTemplate {
 	@Column(columnDefinition = "TEXT")
 	private String description;
 
+	@Column(nullable = false)
+	private Integer position;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;

@@ -142,12 +142,18 @@ WHERE NOT EXISTS (
 INSERT INTO workout_templates (
     owner_id,
     name,
-    description
+    description,
+    position
 )
 SELECT
     trainer.id,
     'Beginner Full Body',
-    'Simple full-body workout for new clients.'
+    'Simple full-body workout for new clients.',
+    COALESCE((
+        SELECT MAX(existing.position) + 1
+        FROM workout_templates existing
+        WHERE existing.owner_id = trainer.id
+    ), 0)
 FROM users trainer
 WHERE trainer.email = 'alex.trainer@setforge.dev'
   AND NOT EXISTS (

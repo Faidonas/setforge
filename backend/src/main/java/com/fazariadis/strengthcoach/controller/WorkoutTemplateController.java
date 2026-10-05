@@ -1,6 +1,7 @@
 package com.fazariadis.strengthcoach.controller;
 
 import com.fazariadis.strengthcoach.dto.CreateWorkoutTemplateRequest;
+import com.fazariadis.strengthcoach.dto.ReorderWorkoutTemplatesRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutTemplateRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
 import com.fazariadis.strengthcoach.service.WorkoutTemplateService;
@@ -77,9 +78,19 @@ public class WorkoutTemplateController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/order")
+    @Operation(summary = "Change the display order of a user's workout templates")
+    @ApiResponse(responseCode = "204", description = "Workout template order saved")
+    @ApiResponse(responseCode = "400", description = "The order is incomplete or contains invalid templates")
+    public ResponseEntity<Void> reorder(
+            @Valid @RequestBody ReorderWorkoutTemplatesRequest request) {
+        workoutTemplateService.reorder(request);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     @Operation(summary = "List a user's workout templates")
-    @ApiResponse(responseCode = "200", description = "Workout templates returned newest first")
+    @ApiResponse(responseCode = "200", description = "Workout templates returned in display order")
     @ApiResponse(responseCode = "404", description = "User was not found")
     public List<WorkoutTemplateResponse> getByOwner(
             @Parameter(description = "Template owner identifier", example = "1")

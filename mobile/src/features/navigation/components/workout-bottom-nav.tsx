@@ -24,7 +24,7 @@ const items: NavigationItem[] = [
   { label: 'History', icon: historyIcon, href: '/history' },
   { label: 'Start', icon: startIcon, href: '/start-workout' },
   { label: 'Exercises', icon: exercisesIcon, href: '/exercises' },
-  { label: 'Profile', icon: profileIcon },
+  { label: 'Profile', icon: profileIcon, href: '/profile' },
 ];
 
 export function WorkoutBottomNav({ activeItem = 'Start' }: { activeItem?: NavigationLabel }) {

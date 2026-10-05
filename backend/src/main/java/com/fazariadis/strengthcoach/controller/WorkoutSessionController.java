@@ -1,6 +1,7 @@
 package com.fazariadis.strengthcoach.controller;
 
 import com.fazariadis.strengthcoach.dto.CompleteWorkoutSessionRequest;
+import com.fazariadis.strengthcoach.dto.PreviousExercisePerformanceResponse;
 import com.fazariadis.strengthcoach.dto.StartWorkoutSessionRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutSessionRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutSessionResponse;
@@ -67,6 +68,16 @@ public class WorkoutSessionController {
 		return workoutSessionService.getCompletedHistory(userId);
 	}
 
+	@GetMapping("/previous-performances")
+	@Operation(summary = "Get the latest completed sets for exercises")
+	public List<PreviousExercisePerformanceResponse> getPreviousPerformances(
+			@Parameter(description = "Workout owner identifier", example = "1")
+			@RequestParam Long userId,
+			@Parameter(description = "Exercise identifiers", example = "1,2,3")
+			@RequestParam List<Long> exerciseIds) {
+		return workoutSessionService.getPreviousPerformances(userId, exerciseIds);
+	}
+
 	@PostMapping("/{sessionId}/complete")
 	@Operation(
 			summary = "Complete and save a workout",
@@ -79,9 +90,11 @@ public class WorkoutSessionController {
 	}
 
 	@PostMapping("/{sessionId}/cancel")
-	@Operation(summary = "Cancel an active workout")
-	public WorkoutSessionResponse cancel(@PathVariable Long sessionId) {
-		return workoutSessionService.cancel(sessionId);
+	@Operation(summary = "Cancel and permanently discard an active workout")
+	@ApiResponse(responseCode = "204", description = "Workout discarded")
+	public ResponseEntity<Void> cancel(@PathVariable Long sessionId) {
+		workoutSessionService.cancel(sessionId);
+		return ResponseEntity.noContent().build();
 	}
 
 	@PutMapping("/{sessionId}")

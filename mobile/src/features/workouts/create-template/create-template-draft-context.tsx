@@ -37,6 +37,7 @@ type CreateTemplateDraft = {
   exercises: DraftExercise[];
   loadTemplate: (template: WorkoutTemplate) => void;
   addExercises: (exercises: Exercise[]) => void;
+  moveExercise: (fromIndex: number, toIndex: number) => void;
   removeExercise: (exerciseClientId: string) => void;
   updateExerciseNotes: (exerciseClientId: string, notes: string) => void;
   addSet: (exerciseClientId: string) => void;
@@ -137,6 +138,17 @@ export function CreateTemplateDraftProvider({ children }: { children: ReactNode 
     );
   }, []);
 
+  const moveExercise = useCallback((fromIndex: number, toIndex: number) => {
+    setExercises((currentExercises) => {
+      if (fromIndex === toIndex) return currentExercises;
+      const reordered = [...currentExercises];
+      const [movedExercise] = reordered.splice(fromIndex, 1);
+      if (!movedExercise) return currentExercises;
+      reordered.splice(toIndex, 0, movedExercise);
+      return reordered;
+    });
+  }, []);
+
   const updateExerciseNotes = useCallback((exerciseClientId: string, notes: string) => {
     setExercises((currentExercises) =>
       currentExercises.map((exercise) =>
@@ -214,6 +226,7 @@ export function CreateTemplateDraftProvider({ children }: { children: ReactNode 
       exercises,
       loadTemplate,
       addExercises,
+      moveExercise,
       removeExercise,
       updateExerciseNotes,
       addSet,
@@ -227,6 +240,7 @@ export function CreateTemplateDraftProvider({ children }: { children: ReactNode 
       description,
       exercises,
       loadTemplate,
+      moveExercise,
       name,
       removeExercise,
       removeSet,

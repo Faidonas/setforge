@@ -42,7 +42,8 @@ class ExerciseServiceTests {
 				.exerciseType(ExerciseType.WEIGHT_AND_REPS)
 				.build();
 
-		when(exerciseRepository.findAllByOrderByNameAsc()).thenReturn(List.of(benchPress, squat));
+		when(exerciseRepository.findAllByCatalogVisibleTrueOrderByNameAsc())
+				.thenReturn(List.of(benchPress, squat));
 		when(benchPress.getId()).thenReturn(benchPressResponse.getId());
 		when(benchPress.getName()).thenReturn(benchPressResponse.getName());
 		when(benchPress.getPrimaryMuscle()).thenReturn(benchPressResponse.getPrimaryMuscle());
@@ -73,7 +74,7 @@ class ExerciseServiceTests {
 		List<ExerciseResponse> result = exerciseService.getAllExercises();
 
 		assertThat(result).containsExactly(benchPressResponse, squatResponse);
-		verify(exerciseRepository).findAllByOrderByNameAsc();
+		verify(exerciseRepository).findAllByCatalogVisibleTrueOrderByNameAsc();
 	}
 
 	@Test

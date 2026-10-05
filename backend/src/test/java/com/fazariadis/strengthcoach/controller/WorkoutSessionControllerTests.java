@@ -5,16 +5,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fazariadis.strengthcoach.dto.PreviousExercisePerformanceResponse;
+import com.fazariadis.strengthcoach.dto.PreviousExerciseSetResponse;
 import com.fazariadis.strengthcoach.dto.StartWorkoutSessionRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutSessionRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutSessionResponse;
+import com.fazariadis.strengthcoach.entity.enums.SetType;
 import com.fazariadis.strengthcoach.exception.ApiExceptionHandler;
 import com.fazariadis.strengthcoach.service.WorkoutSessionService;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -80,5 +86,38 @@ class WorkoutSessionControllerTests {
 				.andExpect(status().isNoContent());
 
 		verify(workoutSessionService).deleteCompleted(12L);
+	}
+
+	@Test
+	void cancelsAndDiscardsActiveWorkout() throws Exception {
+		mockMvc.perform(post("/api/workout-sessions/12/cancel"))
+				.andExpect(status().isNoContent());
+
+		verify(workoutSessionService).cancel(12L);
+	}
+
+	@Test
+	void getsPreviousExercisePerformances() throws Exception {
+		when(workoutSessionService.getPreviousPerformances(1L, List.of(10L, 11L)))
+				.thenReturn(List.of(PreviousExercisePerformanceResponse.builder()
+						.exerciseId(10L)
+						.workoutSessionId(12L)
+						.performedAt(Instant.parse("2026-10-02T18:30:00Z"))
+						.sets(List.of(PreviousExerciseSetResponse.builder()
+								.position(0)
+								.setType(SetType.NORMAL)
+								.reps(8)
+								.weight(new BigDecimal("75.00"))
+								.build()))
+						.build()));
+
+		mockMvc.perform(get("/api/workout-sessions/previous-performances")
+					.param("userId", "1")
+					.param("exerciseIds", "10,11"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].exerciseId").value(10))
+				.andExpect(jsonPath("$[0].workoutSessionId").value(12))
+				.andExpect(jsonPath("$[0].sets[0].reps").value(8))
+				.andExpect(jsonPath("$[0].sets[0].weight").value(75.0));
 	}
 }

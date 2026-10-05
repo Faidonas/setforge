@@ -1,6 +1,7 @@
 package com.fazariadis.strengthcoach.service;
 
 import com.fazariadis.strengthcoach.dto.CreateWorkoutTemplateRequest;
+import com.fazariadis.strengthcoach.dto.ReorderWorkoutTemplatesRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutTemplateRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateExerciseRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
@@ -46,13 +47,16 @@ public class WorkoutTemplateService {
 		User owner = userRepository.findById(request.getOwnerId())
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"User " + request.getOwnerId() + " was not found"));
+		String name = request.getName().trim();
+		validateUniqueName(owner.getId(), name, null);
 		Map<Long, Exercise> exercisesById = loadExercises(request.getExercises());
 		validatePlan(request.getExercises(), exercisesById);
 
 		WorkoutTemplate template = workoutTemplateRepository.saveAndFlush(WorkoutTemplate.builder()
 				.owner(owner)
-				.name(request.getName().trim())
+				.name(name)
 				.description(request.getDescription())
+				.position(nextPosition(owner.getId()))
 				.build());
 		replacePlan(template, request.getExercises(), exercisesById);
 
@@ -62,10 +66,12 @@ public class WorkoutTemplateService {
 	@Transactional
 	public WorkoutTemplateResponse update(Long templateId, UpdateWorkoutTemplateRequest request) {
 		WorkoutTemplate template = findTemplate(templateId);
+		String name = request.getName().trim();
+		validateUniqueName(template.getOwner().getId(), name, templateId);
 		Map<Long, Exercise> exercisesById = loadExercises(request.getExercises());
 		validatePlan(request.getExercises(), exercisesById);
 
-		template.setName(request.getName().trim());
+		template.setName(name);
 		template.setDescription(request.getDescription());
 		workoutTemplateRepository.saveAndFlush(template);
 
@@ -101,15 +107,60 @@ public class WorkoutTemplateService {
 		if (!userRepository.existsById(ownerId)) {
 			throw new ResourceNotFoundException("User " + ownerId + " was not found");
 		}
-		return workoutTemplateRepository.findAllByOwner_IdOrderByUpdatedAtDesc(ownerId).stream()
+		return workoutTemplateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(ownerId).stream()
 				.map(this::loadResponse)
 				.toList();
+	}
+
+	@Transactional
+	public void reorder(ReorderWorkoutTemplatesRequest request) {
+		if (!userRepository.existsById(request.getOwnerId())) {
+			throw new ResourceNotFoundException("User " + request.getOwnerId() + " was not found");
+		}
+		List<WorkoutTemplate> templates =
+				workoutTemplateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(request.getOwnerId());
+		List<Long> requestedIds = request.getTemplateIds();
+		if (requestedIds.size() != templates.size()
+				|| new LinkedHashSet<>(requestedIds).size() != requestedIds.size()
+				|| !new LinkedHashSet<>(templates.stream().map(WorkoutTemplate::getId).toList())
+						.equals(new LinkedHashSet<>(requestedIds))) {
+			throw new InvalidRequestException(
+					"Template order must contain every template owned by user " + request.getOwnerId()
+							+ " exactly once");
+		}
+
+		Map<Long, WorkoutTemplate> templatesById = templates.stream()
+				.collect(Collectors.toMap(WorkoutTemplate::getId, Function.identity()));
+		for (int position = 0; position < requestedIds.size(); position++) {
+			templatesById.get(requestedIds.get(position)).setPosition(position);
+		}
+		workoutTemplateRepository.saveAll(templates);
+		workoutTemplateRepository.flush();
+	}
+
+	private int nextPosition(Long ownerId) {
+		return workoutTemplateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(ownerId).stream()
+				.map(WorkoutTemplate::getPosition)
+				.filter(java.util.Objects::nonNull)
+				.max(Integer::compareTo)
+				.orElse(-1) + 1;
 	}
 
 	private WorkoutTemplate findTemplate(Long templateId) {
 		return workoutTemplateRepository.findById(templateId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Workout template " + templateId + " was not found"));
+	}
+
+	private void validateUniqueName(Long ownerId, String name, Long excludedTemplateId) {
+		boolean alreadyExists = excludedTemplateId == null
+				? workoutTemplateRepository.existsByOwner_IdAndNameIgnoreCase(ownerId, name)
+				: workoutTemplateRepository.existsByOwner_IdAndNameIgnoreCaseAndIdNot(
+						ownerId, name, excludedTemplateId);
+		if (alreadyExists) {
+			throw new InvalidRequestException(
+					"Workout template name '" + name + "' is already in use for this user");
+		}
 	}
 
 	private Map<Long, Exercise> loadExercises(List<WorkoutTemplateExerciseRequest> requests) {

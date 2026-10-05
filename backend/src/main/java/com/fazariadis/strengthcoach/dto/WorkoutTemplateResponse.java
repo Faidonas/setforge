@@ -19,6 +19,7 @@ public class WorkoutTemplateResponse {
 	private Long ownerId;
 	private String name;
 	private String description;
+	private Integer position;
 	private List<WorkoutTemplateExerciseResponse> exercises;
 	private Instant createdAt;
 	private Instant updatedAt;

@@ -67,4 +67,8 @@ public class Exercise {
 
 	@Column(length = 255)
 	private String attribution;
+
+	@Column(name = "catalog_visible", nullable = false)
+	@Builder.Default
+	private boolean catalogVisible = true;
 }

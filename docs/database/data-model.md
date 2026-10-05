@@ -7,6 +7,8 @@ changes.
 The executable database files are:
 
 - [`schema.sql`](./schema.sql) creates the tables, constraints, and indexes.
+- [`exercise-catalog-data.sql`](./exercise-catalog-data.sql) imports the complete practice dataset.
+- [`core-exercise-catalog.sql`](./core-exercise-catalog.sql) selects the app's curated core library.
 - [`dev-data.sql`](./dev-data.sql) inserts local development data and must never be used as
   production user data.
 
@@ -54,6 +56,15 @@ erDiagram
         varchar equipment
         varchar exercise_type
         text instructions
+        varchar body_part
+        varchar muscle_group
+        text secondary_muscles
+        varchar source_name
+        varchar source_id
+        varchar thumbnail_url
+        varchar animation_url
+        varchar attribution
+        boolean catalog_visible
     }
 
     WORKOUT_TEMPLATES {
@@ -184,6 +195,11 @@ optional catalogue media. Imported practice data also records its source identif
 supporting muscles, thumbnail, animation, and the attribution that must be displayed with the media.
 A single exercise can be referenced by many workout templates.
 
+`catalog_visible` controls whether an exercise appears in the exercise library and exercise pickers.
+Hidden exercises are retained so existing templates and workout history never lose their references,
+and they remain available through direct lookup by ID. Exercises created inside SetForge are visible
+by default.
+
 The current practice catalogue comes from `hasaneyldrm/exercises-dataset`. Its data and instruction
 text use the MIT licence. Its 180x180 thumbnails and GIFs remain the property of GymVisual and are
 kept only for local learning. They must be licensed or replaced before SetForge is distributed.
@@ -207,6 +223,14 @@ Relationships:
 - `owner_id` references the user who controls the template.
 - A template contains ordered `WorkoutTemplateExercise` rows.
 - Completed and in-progress sessions may reference the template as their source.
+
+Rules:
+
+- Each user must have unique template names. Comparison ignores letter case and surrounding spaces,
+  so `Upper A`, `upper a`, and ` Upper A ` are treated as the same name for one owner.
+- Different users may use the same template name.
+- `position` stores the owner's custom grid order. New templates are appended and the owner may
+  reorder the complete list without changing the exercise order inside any template.
 
 ### WorkoutTemplateExercise
 
@@ -259,16 +283,17 @@ workout. A session may start from a template or may be created as an empty worko
 
 - `IN_PROGRESS`
 - `COMPLETED`
-- `CANCELLED`
 
 Rules:
 
 - `user_id` identifies the person performing the workout.
 - `source_template_id` is optional and records where the workout began.
 - The session name is stored independently so later template edits do not rename workout history.
-- A user can have only one `IN_PROGRESS` workout at a time. Completed and cancelled workouts do
-  not prevent a new workout from starting.
-- Completed and cancelled sessions require `completed_at`; in-progress sessions do not have it.
+- A user can have only one `IN_PROGRESS` workout at a time. Completed workouts do not prevent a
+  new workout from starting.
+- Completed sessions require `completed_at`; in-progress sessions do not have it.
+- Cancelling a workout permanently deletes its session. Database cascades also delete its exercise
+  and set rows, so abandoned workouts do not accumulate.
 - `completed_at` cannot be earlier than `started_at`.
 - Deleting the source template sets `source_template_id` to null instead of deleting the session.
 
@@ -337,6 +362,12 @@ records. Database cascades protect consistency; they are not an authorization sy
 - Timestamps use PostgreSQL `TIMESTAMPTZ` and Java `Instant`.
 - Ordered child records use a zero-based `position` column rather than relying on database return
   order.
+- Exercise work timers and rest timers are stored as integer seconds. Clients may present and edit
+  them as minutes and seconds (for example, `90` seconds as `1:30`) but must convert them back to
+  seconds in API requests.
+- The `Previous` value shown beside a set is derived from the latest completed workout session for
+  the same user and exercise. It reads the completed actual values in `workout_sets`; it is not
+  copied into templates or stored in another history table.
 - JPA relationships are lazy and currently unidirectional. Child repositories load ordered rows
   when needed.
 - API controllers return DTOs and must not expose JPA entities directly.

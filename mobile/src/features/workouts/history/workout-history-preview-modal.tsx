@@ -12,8 +12,13 @@ export function WorkoutHistoryPreviewModal({
 }) {
   return (
     <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={workout !== null}>
-      <Pressable onPress={onClose} style={styles.backdrop}>
-        <Pressable onPress={(event) => event.stopPropagation()} style={styles.card}>
+      <View style={styles.backdrop}>
+        <Pressable
+          accessibilityLabel="Close workout preview"
+          onPress={onClose}
+          style={styles.backdropDismissArea}
+        />
+        <View accessibilityViewIsModal style={styles.card}>
           {workout && (
             <>
               <View style={styles.header}>
@@ -37,7 +42,12 @@ export function WorkoutHistoryPreviewModal({
                 <Summary value={countCompletedSets(workout).toString()} label="SETS" />
               </View>
 
-              <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                contentContainerStyle={styles.content}
+                nestedScrollEnabled
+                persistentScrollbar
+                showsVerticalScrollIndicator
+                style={styles.exerciseScroll}>
                 {workout.exercises.map((exercise) => (
                   <View key={exercise.id} style={styles.exerciseBlock}>
                     <Text style={styles.exerciseName}>{exercise.exerciseName}</Text>
@@ -64,8 +74,8 @@ export function WorkoutHistoryPreviewModal({
               </ScrollView>
             </>
           )}
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -99,7 +109,8 @@ function formatDate(value: string) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18, backgroundColor: 'rgba(0, 0, 0, 0.76)' },
-  card: { width: '100%', maxWidth: 440, maxHeight: '86%', overflow: 'hidden', borderWidth: 1, borderColor: SetForgeColors.border, borderRadius: 15, backgroundColor: SetForgeColors.surface },
+  backdropDismissArea: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  card: { width: '100%', maxWidth: 440, height: '86%', overflow: 'hidden', borderWidth: 1, borderColor: SetForgeColors.border, borderRadius: 15, backgroundColor: SetForgeColors.surface },
   header: { minHeight: 72, flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: SetForgeColors.border },
   headerSide: { width: 42 },
   headerCopy: { flex: 1, alignItems: 'center', gap: 3 },
@@ -111,7 +122,8 @@ const styles = StyleSheet.create({
   summaryValue: { color: SetForgeColors.accent, fontFamily: 'monospace', fontSize: 14, fontWeight: '800' },
   summaryLabel: { color: SetForgeColors.textDisabled, fontFamily: 'monospace', fontSize: 8, fontWeight: '700' },
   divider: { width: 1, height: 28, backgroundColor: SetForgeColors.border },
-  content: { paddingBottom: 20 },
+  exerciseScroll: { flex: 1 },
+  content: { paddingBottom: 28 },
   exerciseBlock: { paddingHorizontal: 18, paddingTop: 17, paddingBottom: 13, borderBottomWidth: 1, borderBottomColor: SetForgeColors.border },
   exerciseName: { color: SetForgeColors.textPrimary, fontSize: 16, lineHeight: 21, fontWeight: '800', textTransform: 'capitalize' },
   exerciseMeta: { marginTop: 2, color: SetForgeColors.textSecondary, fontSize: 10, textTransform: 'capitalize' },

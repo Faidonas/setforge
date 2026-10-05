@@ -30,6 +30,7 @@ export type WorkoutTemplate = {
   ownerId: number;
   name: string;
   description?: string;
+  position?: number;
   exercises: WorkoutTemplateExercise[];
   createdAt: string;
   updatedAt: string;

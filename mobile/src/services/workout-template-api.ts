@@ -184,3 +184,32 @@ export async function deleteWorkoutTemplate(templateId: number): Promise<void> {
     );
   }
 }
+
+export async function reorderWorkoutTemplates(ownerId: number, templateIds: number[]): Promise<void> {
+  if (!apiUrl) {
+    throw new Error(
+      'The API URL is not configured. Set EXPO_PUBLIC_API_URL in your Expo environment.',
+    );
+  }
+
+  const baseUrl = apiUrl.replace(/\/$/, '');
+  let response: Response;
+
+  try {
+    response = await fetch(`${baseUrl}/api/workout-templates/order`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerId, templateIds }),
+    });
+  } catch {
+    throw new Error('Could not connect to the workout template API. Check your network and API URL.');
+  }
+
+  if (!response.ok) {
+    const responseDetails = await response.text().catch(() => '');
+    const details = responseDetails ? `: ${responseDetails}` : '';
+    throw new Error(
+      `The workout template API returned ${response.status} ${response.statusText}${details}`.trim(),
+    );
+  }
+}

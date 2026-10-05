@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import type { MenuAnchor } from '@/components/anchored-menu-modal';
 import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
@@ -11,6 +12,7 @@ import { WorkoutHistoryActionsModal } from '@/features/workouts/history/workout-
 import { WorkoutHistoryPreviewModal } from '@/features/workouts/history/workout-history-preview-modal';
 import type { WorkoutSession } from '@/models/workout-session';
 import { cancelWorkoutSession, deleteWorkoutSession, getWorkoutHistory, startWorkoutSession } from '@/services/workout-session-api';
+import { createWorkoutTemplate } from '@/services/workout-template-api';
 
 export default function WorkoutHistoryScreen() {
   const router = useRouter();
@@ -23,6 +25,7 @@ export default function WorkoutHistoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [previewWorkout, setPreviewWorkout] = useState<WorkoutSession | null>(null);
   const [actionWorkout, setActionWorkout] = useState<WorkoutSession | null>(null);
+  const [actionAnchor, setActionAnchor] = useState<MenuAnchor | null>(null);
   const [repeatWorkout, setRepeatWorkout] = useState<WorkoutSession | null>(null);
   const [showConflict, setShowConflict] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -69,12 +72,51 @@ export default function WorkoutHistoryScreen() {
     else void performAgain(workout);
   };
 
+  const saveAsTemplate = async (workout: WorkoutSession) => {
+    setActionWorkout(null);
+    try {
+      setError(null);
+      const template = await createWorkoutTemplate({
+        ownerId: DEVELOPMENT_USER_ID,
+        name: workout.name,
+        description: `Created from workout completed ${formatWorkoutDate(
+          workout.completedAt ?? workout.startedAt,
+        )}.`,
+        exercises: workout.exercises.map((exercise) => ({
+          exerciseId: exercise.exerciseId,
+          notes: exercise.notes,
+          sets: exercise.sets.map((set) => ({
+            setType: set.setType,
+            targetReps:
+              exercise.exerciseType === 'WEIGHT_AND_REPS'
+                ? (set.reps ?? set.targetReps)
+                : undefined,
+            targetWeight:
+              exercise.exerciseType === 'WEIGHT_AND_REPS'
+                ? (set.weight ?? set.targetWeight)
+                : undefined,
+            targetTimeSeconds:
+              exercise.exerciseType === 'TIMED'
+                ? (set.timeSeconds ?? set.targetTimeSeconds ?? 30)
+                : undefined,
+            restSeconds: set.restSeconds,
+          })),
+        })),
+      });
+      Alert.alert('Template Saved', `${template.name} is now available in My Templates.`);
+    } catch (templateError) {
+      setError(
+        templateError instanceof Error ? templateError.message : 'Could not save the template.',
+      );
+    }
+  };
+
   const performAgain = async (workout: WorkoutSession) => {
     try {
       setIsStarting(true); setError(null); setShowConflict(false);
       const session = await startWorkoutSession({ userId: DEVELOPMENT_USER_ID, sourceWorkoutSessionId: workout.id });
       activeWorkout.loadSession(session); setRepeatWorkout(null);
-      router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
+      activeWorkout.expand();
     } catch (startError) { setError(startError instanceof Error ? startError.message : 'Could not start the workout.'); }
     finally { setIsStarting(false); }
   };
@@ -87,7 +129,7 @@ export default function WorkoutHistoryScreen() {
       activeWorkout.reset();
       const session = await startWorkoutSession({ userId: DEVELOPMENT_USER_ID, sourceWorkoutSessionId: repeatWorkout.id });
       activeWorkout.loadSession(session); setShowConflict(false); setRepeatWorkout(null);
-      router.push({ pathname: '/active-workout/[id]', params: { id: session.id.toString() } });
+      activeWorkout.expand();
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : 'Could not start the workout.');
       await activeWorkout.refreshActiveWorkout();
@@ -123,23 +165,25 @@ export default function WorkoutHistoryScreen() {
             ListHeaderComponent={error ? <Text style={styles.inlineError}>{error}</Text> : null}
             onScrollToIndexFailed={({ index }) => listRef.current?.scrollToOffset({ offset: index * 260, animated: true })}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadHistory(true)} tintColor={SetForgeColors.accent} colors={[SetForgeColors.accent]} />}
-            renderItem={({ item, index }) => <View>{(index === 0 || monthKey(workouts[index - 1]) !== monthKey(item)) && <Text style={styles.monthHeading}>{formatMonth(item)}</Text>}<WorkoutHistoryCard highlighted={item.id === highlightedWorkoutId} onMore={() => setActionWorkout(item)} onPress={() => setPreviewWorkout(item)} workout={item} /></View>}
+            renderItem={({ item, index }) => <View>{(index === 0 || monthKey(workouts[index - 1]) !== monthKey(item)) && <Text style={styles.monthHeading}>{formatMonth(item)}</Text>}<WorkoutHistoryCard highlighted={item.id === highlightedWorkoutId} onMore={(anchor) => { setActionAnchor(anchor); setActionWorkout(item); }} onPress={() => setPreviewWorkout(item)} workout={item} /></View>}
             showsVerticalScrollIndicator={false}
           />
         )}
         <WorkoutHistoryPreviewModal onClose={() => setPreviewWorkout(null)} workout={previewWorkout} />
         <WorkoutHistoryActionsModal
-          onClose={() => setActionWorkout(null)}
+          anchor={actionAnchor}
+          onClose={() => { setActionWorkout(null); setActionAnchor(null); }}
           onDelete={deleteSavedWorkout}
           onEdit={(workout) => { setActionWorkout(null); router.push({ pathname: '/edit-workout/[id]', params: { id: workout.id.toString() } }); }}
           onPerformAgain={requestPerformAgain}
+          onSaveAsTemplate={(workout) => void saveAsTemplate(workout)}
           workout={actionWorkout}
         />
         <WorkoutCalendarModal onClose={() => setShowCalendar(false)} onSelectWorkout={selectCalendarWorkout} visible={showCalendar} workouts={workouts} />
         <WorkoutConflictModal
           isBusy={isStarting}
           onClose={() => { setShowConflict(false); setRepeatWorkout(null); }}
-          onResume={() => { const active = activeWorkout.session; setShowConflict(false); setRepeatWorkout(null); if (active) router.push({ pathname: '/active-workout/[id]', params: { id: active.id.toString() } }); }}
+          onResume={() => { setShowConflict(false); setRepeatWorkout(null); activeWorkout.expand(); }}
           onStartNew={() => void discardAndPerformAgain()}
           visible={showConflict}
         />
@@ -148,12 +192,13 @@ export default function WorkoutHistoryScreen() {
   );
 }
 
-function WorkoutHistoryCard({ workout, highlighted, onPress, onMore }: { workout: WorkoutSession; highlighted: boolean; onPress: () => void; onMore: () => void }) {
+function WorkoutHistoryCard({ workout, highlighted, onPress, onMore }: { workout: WorkoutSession; highlighted: boolean; onPress: () => void; onMore: (anchor: MenuAnchor) => void }) {
+  const moreButtonRef = useRef<View>(null);
   const completedSets = workout.exercises.reduce((total, exercise) => total + exercise.sets.filter((set) => set.completed).length, 0);
   const totalSets = workout.exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
   const visibleExercises = workout.exercises.slice(0, 3);
   return <Pressable onPress={onPress} style={({ pressed }) => [styles.card, highlighted && styles.highlightedCard, pressed && styles.pressedCard]}>
-    <View style={styles.cardHeader}><View style={styles.cardHeading}><Text numberOfLines={2} style={styles.workoutName}>{workout.name}</Text><Text style={styles.workoutDate}>{formatWorkoutDate(workout.completedAt ?? workout.startedAt)}</Text></View><Pressable accessibilityLabel={`Options for ${workout.name}`} hitSlop={10} onPress={(event) => { event.stopPropagation(); onMore(); }} style={styles.moreButton}><Text style={styles.moreLabel}>•••</Text></Pressable></View>
+    <View style={styles.cardHeader}><View style={styles.cardHeading}><Text numberOfLines={2} style={styles.workoutName}>{workout.name}</Text><Text style={styles.workoutDate}>{formatWorkoutDate(workout.completedAt ?? workout.startedAt)}</Text></View><Pressable accessibilityLabel={`Options for ${workout.name}`} hitSlop={10} ref={moreButtonRef} onPress={(event) => { event.stopPropagation(); moreButtonRef.current?.measureInWindow((x, y, width, height) => onMore({ x, y, width, height })); }} style={styles.moreButton}><Text style={styles.moreLabel}>•••</Text></Pressable></View>
     <View style={styles.metrics}><HistoryMetric label="DURATION" value={formatDuration(workout.startedAt, workout.completedAt)} /><View style={styles.metricDivider} /><HistoryMetric label="EXERCISES" value={workout.exercises.length.toString()} /><View style={styles.metricDivider} /><HistoryMetric label="SETS" value={`${completedSets}/${totalSets}`} /></View>
     {visibleExercises.length > 0 && <View style={styles.exerciseList}>{visibleExercises.map((exercise) => <View key={exercise.id} style={styles.exerciseRow}><Text numberOfLines={1} style={styles.exerciseName}>{exercise.exerciseName}</Text><Text style={styles.exerciseSets}>{exercise.sets.filter((set) => set.completed).length}/{exercise.sets.length} sets</Text></View>)}{workout.exercises.length > visibleExercises.length && <Text style={styles.moreExercises}>+ {workout.exercises.length - visibleExercises.length} more exercises</Text>}</View>}
   </Pressable>;

@@ -1,4 +1,4 @@
-import { Slot, usePathname } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
@@ -6,21 +6,42 @@ import { WorkoutBottomNav } from '@/features/navigation/components/workout-botto
 import { ActiveWorkoutBar } from '@/features/workouts/active-workout/active-workout-bar';
 
 export default function MainLayout() {
-  const pathname = usePathname();
-  const activeItem = pathname === '/exercises'
-    ? 'Exercises'
-    : pathname === '/history'
-      ? 'History'
-      : 'Start';
-
   return (
     <View style={styles.background}>
       <View style={styles.shell}>
-        <View style={styles.content}>
-          <Slot />
-        </View>
-        <ActiveWorkoutBar />
-        <WorkoutBottomNav activeItem={activeItem} />
+        <Tabs
+          backBehavior="history"
+          detachInactiveScreens={false}
+          initialRouteName="start-workout"
+          screenOptions={{
+            animation: 'fade',
+            freezeOnBlur: false,
+            headerShown: false,
+            lazy: false,
+            sceneStyle: styles.content,
+          }}
+          tabBar={({ state }) => {
+            const routeName = state.routes[state.index]?.name;
+            const activeItem = routeName === 'exercises'
+              ? 'Exercises'
+              : routeName === 'history'
+                ? 'History'
+                : routeName === 'profile'
+                  ? 'Profile'
+                : 'Start';
+
+            return (
+              <>
+                <ActiveWorkoutBar />
+                <WorkoutBottomNav activeItem={activeItem} />
+              </>
+            );
+          }}>
+          <Tabs.Screen name="history" />
+          <Tabs.Screen name="start-workout" />
+          <Tabs.Screen name="exercises" />
+          <Tabs.Screen name="profile" />
+        </Tabs>
       </View>
     </View>
   );

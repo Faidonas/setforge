@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -9,13 +8,15 @@ import {
   View,
 } from 'react-native';
 
+import { AnchoredMenuModal, type MenuAnchor } from '@/components/anchored-menu-modal';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import type { WorkoutTemplate } from '@/models/workout-template';
 
-type ActionView = 'menu' | 'rename' | 'delete';
+type ActionView = 'menu' | 'rename' | 'duplicate' | 'delete';
 
 type WorkoutTemplateActionsModalProps = {
   template: WorkoutTemplate | null;
+  anchor: MenuAnchor | null;
   onClose: () => void;
   onEdit: () => void;
   onRename: (name: string) => Promise<void>;
@@ -25,6 +26,7 @@ type WorkoutTemplateActionsModalProps = {
 
 export function WorkoutTemplateActionsModal({
   template,
+  anchor,
   onClose,
   onEdit,
   onRename,
@@ -69,11 +71,6 @@ export function WorkoutTemplateActionsModal({
     setView('rename');
   };
 
-  const returnToMenu = () => {
-    setError(null);
-    setView('menu');
-  };
-
   const submitRename = () => {
     const trimmedName = name.trim();
 
@@ -86,116 +83,114 @@ export function WorkoutTemplateActionsModal({
   };
 
   return (
-    <Modal
-      animationType="fade"
-      onRequestClose={close}
-      statusBarTranslucent
-      transparent
-      visible={template !== null}>
-      <Pressable accessibilityRole="button" onPress={close} style={styles.backdrop}>
-        <Pressable
-          accessibilityViewIsModal
-          onPress={(event) => event.stopPropagation()}
-          style={styles.menu}>
-          {template && view === 'menu' && (
-            <>
-              <View style={styles.heading}>
-                <Text numberOfLines={1} style={styles.title}>
-                  {template.name}
-                </Text>
-                <Text style={styles.subtitle}>TEMPLATE OPTIONS</Text>
-              </View>
-              <MenuAction busy={isWorking} label="Edit Template" onPress={onEdit} />
-              <MenuAction busy={isWorking} label="Rename" onPress={showRename} />
-              <MenuAction
-                label="Duplicate"
-                onPress={() => void runAction(onDuplicate)}
-                working={isWorking}
-              />
-              <MenuAction disabled label="Share" />
-              <MenuAction
-                busy={isWorking}
-                destructive
-                label="Delete"
-                onPress={() => setView('delete')}
-              />
-              {error && <Text style={styles.error}>{error}</Text>}
-              <Pressable accessibilityRole="button" onPress={close} style={styles.cancelButton}>
-                <Text style={styles.cancelLabel}>CANCEL</Text>
+    <AnchoredMenuModal
+      anchor={anchor}
+      anchorContentInset={14}
+      estimatedHeight={view === 'menu' ? 216 : view === 'rename' ? 150 : 142}
+      horizontalAlign="start-if-fits"
+      onClose={close}
+      placement={view === 'menu' ? 'anchor' : 'center'}
+      visible={template !== null}
+      width={212}>
+      <View accessibilityViewIsModal style={styles.menu}>
+        {template && view === 'menu' && (
+          <>
+            <MenuAction busy={isWorking} label="Edit Template" onPress={onEdit} />
+            <MenuAction busy={isWorking} label="Rename" onPress={showRename} />
+            <MenuAction
+              label="Duplicate"
+              onPress={() => {
+                setError(null);
+                setView('duplicate');
+              }}
+            />
+            <MenuAction disabled label="Share" />
+            <MenuAction
+              busy={isWorking}
+              destructive
+              label="Delete"
+              onPress={() => setView('delete')}
+            />
+            {error && <Text style={styles.error}>{error}</Text>}
+          </>
+        )}
+
+        {template && view === 'rename' && (
+          <>
+            <Text style={styles.dialogTitle}>Rename Template</Text>
+            <TextInput
+              accessibilityLabel="New template name"
+              autoFocus
+              maxLength={100}
+              onChangeText={setName}
+              onSubmitEditing={submitRename}
+              returnKeyType="done"
+              selectTextOnFocus
+              style={styles.nameInput}
+              value={name}
+            />
+            {error && <Text style={styles.error}>{error}</Text>}
+            <View style={styles.dialogActions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isWorking}
+                onPress={submitRename}
+                style={[styles.dialogButton, styles.primaryButton]}>
+                {isWorking ? (
+                  <ActivityIndicator color={SetForgeColors.canvas} size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonLabel}>RENAME</Text>
+                )}
               </Pressable>
-            </>
-          )}
+            </View>
+          </>
+        )}
 
-          {template && view === 'rename' && (
-            <>
-              <Text style={styles.dialogTitle}>Rename Template</Text>
-              <TextInput
-                accessibilityLabel="New template name"
-                autoFocus
-                maxLength={100}
-                onChangeText={setName}
-                onSubmitEditing={submitRename}
-                returnKeyType="done"
-                selectTextOnFocus
-                style={styles.nameInput}
-                value={name}
-              />
-              {error && <Text style={styles.error}>{error}</Text>}
-              <View style={styles.dialogActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={isWorking}
-                  onPress={returnToMenu}
-                  style={[styles.dialogButton, styles.secondaryButton]}>
-                  <Text style={styles.secondaryButtonLabel}>CANCEL</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={isWorking}
-                  onPress={submitRename}
-                  style={[styles.dialogButton, styles.primaryButton]}>
-                  {isWorking ? (
-                    <ActivityIndicator color={SetForgeColors.canvas} size="small" />
-                  ) : (
-                    <Text style={styles.primaryButtonLabel}>RENAME</Text>
-                  )}
-                </Pressable>
-              </View>
-            </>
-          )}
+        {template && view === 'duplicate' && (
+          <>
+            <Text style={styles.dialogTitle}>Duplicate Template?</Text>
+            <Text style={styles.confirmationText}>Create a new copy of “{template.name}”?</Text>
+            {error && <Text style={styles.error}>{error}</Text>}
+            <View style={styles.dialogActions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isWorking}
+                onPress={() => void runAction(onDuplicate)}
+                style={[styles.dialogButton, styles.primaryButton]}>
+                {isWorking ? (
+                  <ActivityIndicator color={SetForgeColors.canvas} size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonLabel}>DUPLICATE</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
+        )}
 
-          {template && view === 'delete' && (
-            <>
-              <Text style={styles.dialogTitle}>Delete Template?</Text>
-              <Text style={styles.confirmationText}>
-                “{template.name}” and all of its planned exercises and sets will be deleted.
-              </Text>
-              {error && <Text style={styles.error}>{error}</Text>}
-              <View style={styles.dialogActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={isWorking}
-                  onPress={returnToMenu}
-                  style={[styles.dialogButton, styles.secondaryButton]}>
-                  <Text style={styles.secondaryButtonLabel}>CANCEL</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={isWorking}
-                  onPress={() => void runAction(onDelete)}
-                  style={[styles.dialogButton, styles.deleteButton]}>
-                  {isWorking ? (
-                    <ActivityIndicator color={SetForgeColors.textPrimary} size="small" />
-                  ) : (
-                    <Text style={styles.deleteButtonLabel}>DELETE</Text>
-                  )}
-                </Pressable>
-              </View>
-            </>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+        {template && view === 'delete' && (
+          <>
+            <Text style={styles.dialogTitle}>Delete Template?</Text>
+            <Text style={styles.confirmationText}>
+              “{template.name}” and all of its planned exercises and sets will be deleted.
+            </Text>
+            {error && <Text style={styles.error}>{error}</Text>}
+            <View style={styles.dialogActions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isWorking}
+                onPress={() => void runAction(onDelete)}
+                style={[styles.dialogButton, styles.deleteButton]}>
+                {isWorking ? (
+                  <ActivityIndicator color={SetForgeColors.textPrimary} size="small" />
+                ) : (
+                  <Text style={styles.deleteButtonLabel}>DELETE</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
+        )}
+      </View>
+    </AnchoredMenuModal>
   );
 }
 
@@ -235,47 +230,24 @@ function MenuAction({ label, onPress, disabled, busy, destructive, working }: Me
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
-  },
   menu: {
     width: '100%',
-    maxWidth: 360,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: SetForgeColors.border,
     borderRadius: 12,
     backgroundColor: SetForgeColors.surface,
   },
-  heading: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: SetForgeColors.border,
-  },
-  title: { color: SetForgeColors.textPrimary, fontSize: 17, fontWeight: '800' },
-  subtitle: {
-    marginTop: 4,
-    color: SetForgeColors.textSecondary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
   menuAction: {
-    minHeight: 52,
+    minHeight: 43,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: SetForgeColors.border,
   },
   menuActionPressed: { backgroundColor: SetForgeColors.surfaceMuted },
-  menuActionLabel: { flex: 1, color: SetForgeColors.textPrimary, fontSize: 14, fontWeight: '600' },
+  menuActionLabel: { flex: 1, color: SetForgeColors.textPrimary, fontSize: 13, fontWeight: '700' },
   destructiveLabel: { color: '#F87171' },
   disabledLabel: { color: SetForgeColors.textDisabled },
   soonLabel: {
@@ -284,49 +256,45 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
   },
-  chevron: { color: SetForgeColors.textSecondary, fontSize: 23, fontWeight: '300' },
-  cancelButton: { height: 50, alignItems: 'center', justifyContent: 'center' },
-  cancelLabel: { color: SetForgeColors.textSecondary, fontSize: 12, fontWeight: '800' },
+  chevron: { color: SetForgeColors.textSecondary, fontSize: 17, fontWeight: '300' },
   dialogTitle: {
-    paddingHorizontal: 18,
-    paddingTop: 20,
+    paddingHorizontal: 14,
+    paddingTop: 14,
     color: SetForgeColors.textPrimary,
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '800',
   },
   nameInput: {
-    height: 48,
-    marginHorizontal: 18,
-    marginTop: 16,
-    paddingHorizontal: 13,
+    height: 40,
+    marginHorizontal: 14,
+    marginTop: 11,
+    paddingHorizontal: 11,
     borderWidth: 1,
     borderColor: SetForgeColors.accent,
     borderRadius: 6,
     backgroundColor: SetForgeColors.surfaceMuted,
     color: SetForgeColors.textPrimary,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
   },
   confirmationText: {
-    paddingHorizontal: 18,
-    paddingTop: 12,
+    paddingHorizontal: 14,
+    paddingTop: 9,
     color: SetForgeColors.textSecondary,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
   },
   error: {
-    marginHorizontal: 18,
-    marginTop: 12,
+    marginHorizontal: 14,
+    marginTop: 9,
     color: '#FCA5A5',
     fontSize: 12,
     lineHeight: 17,
   },
-  dialogActions: { flexDirection: 'row', gap: 10, padding: 18 },
-  dialogButton: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 5 },
-  secondaryButton: { borderWidth: 1, borderColor: SetForgeColors.border },
+  dialogActions: { flexDirection: 'row', gap: 8, padding: 14 },
+  dialogButton: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 5 },
   primaryButton: { backgroundColor: SetForgeColors.accent },
   deleteButton: { backgroundColor: '#DC2626' },
-  secondaryButtonLabel: { color: SetForgeColors.textSecondary, fontSize: 12, fontWeight: '800' },
   primaryButtonLabel: { color: SetForgeColors.canvas, fontSize: 12, fontWeight: '800' },
   deleteButtonLabel: { color: SetForgeColors.textPrimary, fontSize: 12, fontWeight: '800' },
 });

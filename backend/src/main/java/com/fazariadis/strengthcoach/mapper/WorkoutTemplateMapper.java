@@ -22,6 +22,7 @@ public class WorkoutTemplateMapper {
 				.ownerId(template.getOwner().getId())
 				.name(template.getName())
 				.description(template.getDescription())
+				.position(template.getPosition())
 				.exercises(templateExercises.stream()
 						.map(templateExercise -> toExerciseResponse(
 								templateExercise,

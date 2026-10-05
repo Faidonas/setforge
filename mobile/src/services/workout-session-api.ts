@@ -1,5 +1,6 @@
 import type {
   CompleteWorkoutSessionRequest,
+  PreviousExercisePerformance,
   StartWorkoutSessionRequest,
   UpdateWorkoutSessionRequest,
   WorkoutSession,
@@ -95,10 +96,22 @@ export async function completeWorkoutSession(
   );
 }
 
-export async function cancelWorkoutSession(sessionId: number): Promise<WorkoutSession> {
-  return asWorkoutSession(
-    await requestWorkoutSession(`/api/workout-sessions/${sessionId}/cancel`, { method: 'POST' }),
-  );
+export async function cancelWorkoutSession(sessionId: number): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBaseUrl()}/api/workout-sessions/${sessionId}/cancel`, {
+      method: 'POST',
+    });
+  } catch {
+    throw new Error('Could not connect to the workout API. Check your network and API URL.');
+  }
+  if (response.status === 404) return;
+  if (!response.ok) {
+    const details = await response.text().catch(() => '');
+    throw new Error(
+      `The workout API returned ${response.status} ${response.statusText}${details ? `: ${details}` : ''}`.trim(),
+    );
+  }
 }
 
 export async function getWorkoutHistory(userId: number): Promise<WorkoutSession[]> {
@@ -109,6 +122,20 @@ export async function getWorkoutHistory(userId: number): Promise<WorkoutSession[
     throw new Error('The workout API returned an unexpected history response.');
   }
   return value as WorkoutSession[];
+}
+
+export async function getPreviousExercisePerformances(
+  userId: number,
+  exerciseIds: number[],
+): Promise<PreviousExercisePerformance[]> {
+  if (exerciseIds.length === 0) return [];
+  const value = await requestWorkoutSession(
+    `/api/workout-sessions/previous-performances?userId=${encodeURIComponent(userId)}&exerciseIds=${encodeURIComponent(exerciseIds.join(','))}`,
+  );
+  if (!Array.isArray(value)) {
+    throw new Error('The workout API returned an unexpected previous-performance response.');
+  }
+  return value as PreviousExercisePerformance[];
 }
 
 export async function updateWorkoutSession(

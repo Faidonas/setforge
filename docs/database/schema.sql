@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS exercises
     thumbnail_url   VARCHAR(255),
     animation_url   VARCHAR(255),
     attribution     VARCHAR(255),
+    catalog_visible BOOLEAN       NOT NULL DEFAULT TRUE,
     CONSTRAINT uq_exercises_source UNIQUE (source_name, source_id),
     CONSTRAINT ck_exercises_type
         CHECK (exercise_type IN ('WEIGHT_AND_REPS', 'TIMED'))
@@ -68,6 +69,7 @@ CREATE TABLE IF NOT EXISTS workout_templates
     owner_id    BIGINT       NOT NULL,
     name        VARCHAR(100) NOT NULL,
     description TEXT,
+    position    INTEGER      NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_workout_templates_owner
@@ -76,6 +78,9 @@ CREATE TABLE IF NOT EXISTS workout_templates
 
 CREATE INDEX IF NOT EXISTS ix_workout_templates_owner
     ON workout_templates (owner_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_workout_templates_owner_name
+    ON workout_templates (owner_id, LOWER(BTRIM(name)));
 
 CREATE TABLE IF NOT EXISTS workout_template_exercises
 (
@@ -143,11 +148,11 @@ CREATE TABLE IF NOT EXISTS workout_sessions
     CONSTRAINT fk_workout_sessions_source_template
         FOREIGN KEY (source_template_id) REFERENCES workout_templates (id) ON DELETE SET NULL,
     CONSTRAINT ck_workout_sessions_status
-        CHECK (status IN ('IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
+        CHECK (status IN ('IN_PROGRESS', 'COMPLETED')),
     CONSTRAINT ck_workout_sessions_completion
         CHECK (
             (status = 'IN_PROGRESS' AND completed_at IS NULL)
-            OR (status IN ('COMPLETED', 'CANCELLED') AND completed_at IS NOT NULL)
+            OR (status = 'COMPLETED' AND completed_at IS NOT NULL)
         ),
     CONSTRAINT ck_workout_sessions_dates
         CHECK (completed_at IS NULL OR completed_at >= started_at)
@@ -243,8 +248,31 @@ CREATE TABLE IF NOT EXISTS workout_sets
 );
 
 -- Upgrade an existing development database. These statements are safe to rerun.
+ALTER TABLE workout_templates
+    ADD COLUMN IF NOT EXISTS position INTEGER;
+
+WITH ranked_templates AS (
+    SELECT id,
+           ROW_NUMBER() OVER (PARTITION BY owner_id ORDER BY updated_at DESC, id DESC) - 1 AS position
+    FROM workout_templates
+)
+UPDATE workout_templates AS template
+SET position = ranked.position
+FROM ranked_templates AS ranked
+WHERE template.id = ranked.id
+  AND template.position IS NULL;
+
+ALTER TABLE workout_templates
+    ALTER COLUMN position SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS ix_workout_templates_owner_position
+    ON workout_templates (owner_id, position);
+
 ALTER TABLE exercises
     ADD COLUMN IF NOT EXISTS exercise_type VARCHAR(30) NOT NULL DEFAULT 'WEIGHT_AND_REPS';
+
+ALTER TABLE exercises
+    ADD COLUMN IF NOT EXISTS catalog_visible BOOLEAN NOT NULL DEFAULT TRUE;
 
 ALTER TABLE exercises
     ADD COLUMN IF NOT EXISTS body_part VARCHAR(50),
@@ -259,6 +287,9 @@ ALTER TABLE exercises
 CREATE UNIQUE INDEX IF NOT EXISTS uq_exercises_source
     ON exercises (source_name, source_id)
     WHERE source_name IS NOT NULL AND source_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_exercises_visible_name
+    ON exercises (catalog_visible, name);
 
 DO $$
 BEGIN
@@ -382,6 +413,24 @@ BEGIN
     END IF;
 END
 $$;
+
+-- Cancelled sessions are now discarded instead of retained. Cascading foreign keys remove their
+-- exercise and set rows. Rebuild the status constraints for existing development databases.
+DELETE FROM workout_sessions
+WHERE status = 'CANCELLED';
+
+ALTER TABLE workout_sessions
+    DROP CONSTRAINT IF EXISTS ck_workout_sessions_status,
+    DROP CONSTRAINT IF EXISTS ck_workout_sessions_completion;
+
+ALTER TABLE workout_sessions
+    ADD CONSTRAINT ck_workout_sessions_status
+        CHECK (status IN ('IN_PROGRESS', 'COMPLETED')),
+    ADD CONSTRAINT ck_workout_sessions_completion
+        CHECK (
+            (status = 'IN_PROGRESS' AND completed_at IS NULL)
+            OR (status = 'COMPLETED' AND completed_at IS NOT NULL)
+        );
 
 -- The application connects as setforge_app, while structural SQL is run as postgres.
 GRANT USAGE ON SCHEMA public TO setforge_app;
