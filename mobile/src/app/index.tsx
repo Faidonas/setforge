@@ -1,5 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +13,7 @@ const personalTrainerIcon = require('@/assets/images/figma/users.svg');
 
 export default function WelcomeRoleSelectionScreen() {
   const router = useRouter();
+  const [selectedRole, setSelectedRole] = useState<'athlete' | 'coach'>('athlete');
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -26,19 +29,22 @@ export default function WelcomeRoleSelectionScreen() {
             title="Train Myself"
             description="Track my workouts, sets, and progressive overload"
             icon={<Image source={trainMyselfIcon} style={styles.icon} contentFit="contain" />}
-            selected
+            selected={selectedRole === 'athlete'}
+            onPress={() => setSelectedRole('athlete')}
           />
           <RoleOptionCard
             title="Personal Trainer"
             description="Manage clients, design templates, monitor metrics"
             icon={<Image source={personalTrainerIcon} style={styles.icon} contentFit="contain" />}
+            selected={selectedRole === 'coach'}
+            onPress={() => setSelectedRole('coach')}
           />
         </View>
 
         <View style={styles.footer}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push('/start-workout')}
+            onPress={() => router.push((selectedRole === 'coach' ? '/coach' : '/start-workout') as Href)}
             style={styles.continueButton}>
             <Text style={styles.continueLabel}>CONTINUE</Text>
           </Pressable>

@@ -7,7 +7,7 @@ import type {
 import type { ExerciseType } from '@/models/workout-template';
 import { getPreviousExercisePerformances } from '@/services/workout-session-api';
 
-export function usePreviousPerformances(userId: number, exerciseIds: number[]) {
+export function usePreviousPerformances(exerciseIds: number[]) {
   const exerciseKey = [...new Set(exerciseIds)].sort((a, b) => a - b).join(',');
   const [performances, setPerformances] = useState<PreviousExercisePerformance[]>([]);
 
@@ -18,7 +18,7 @@ export function usePreviousPerformances(userId: number, exerciseIds: number[]) {
     }
 
     let current = true;
-    getPreviousExercisePerformances(userId, ids)
+    getPreviousExercisePerformances(ids)
       .then((result) => {
         if (current) setPerformances(result);
       })
@@ -28,7 +28,7 @@ export function usePreviousPerformances(userId: number, exerciseIds: number[]) {
     return () => {
       current = false;
     };
-  }, [exerciseKey, userId]);
+  }, [exerciseKey]);
 
   return useMemo(
     () => {

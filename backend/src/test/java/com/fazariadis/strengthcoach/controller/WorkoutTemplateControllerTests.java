@@ -21,22 +21,28 @@ import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
 import com.fazariadis.strengthcoach.entity.enums.SetType;
 import com.fazariadis.strengthcoach.exception.ApiExceptionHandler;
 import com.fazariadis.strengthcoach.service.WorkoutTemplateService;
+import com.fazariadis.strengthcoach.service.AuthenticatedUserService;
+import com.fazariadis.strengthcoach.entity.User;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 
 class WorkoutTemplateControllerTests {
 
 	private final WorkoutTemplateService workoutTemplateService = mock(WorkoutTemplateService.class);
+	private final AuthenticatedUserService authenticatedUserService = mock(AuthenticatedUserService.class);
 	private final MockMvc mockMvc = MockMvcBuilders
-			.standaloneSetup(new WorkoutTemplateController(workoutTemplateService))
+			.standaloneSetup(new WorkoutTemplateController(workoutTemplateService, authenticatedUserService))
+			.setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
 
 	@Test
 	void createsTemplateAndReturnsItsLocation() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		when(workoutTemplateService.create(any(CreateWorkoutTemplateRequest.class)))
 				.thenReturn(WorkoutTemplateResponse.builder()
 						.id(12L)
@@ -83,10 +89,11 @@ class WorkoutTemplateControllerTests {
 
 	@Test
 	void listsTemplatesForOwner() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		when(workoutTemplateService.getByOwner(1L)).thenReturn(List.of(
 				WorkoutTemplateResponse.builder().id(12L).ownerId(1L).name("Upper Body").build()));
 
-		mockMvc.perform(get("/api/workout-templates").param("ownerId", "1"))
+		mockMvc.perform(get("/api/workout-templates"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(12))
 				.andExpect(jsonPath("$[0].name").value("Upper Body"));
@@ -94,6 +101,7 @@ class WorkoutTemplateControllerTests {
 
 	@Test
 	void omitsTargetsThatDoNotApplyToExerciseType() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		WorkoutTemplateSetResponse weightSet = WorkoutTemplateSetResponse.builder()
 				.id(201L)
 				.position(0)
@@ -109,7 +117,7 @@ class WorkoutTemplateControllerTests {
 				.targetTimeSeconds(45)
 				.restSeconds(30)
 				.build();
-		when(workoutTemplateService.getById(12L)).thenReturn(WorkoutTemplateResponse.builder()
+		when(workoutTemplateService.getById(12L, 1L)).thenReturn(WorkoutTemplateResponse.builder()
 				.id(12L)
 				.ownerId(1L)
 				.name("Full Body")
@@ -136,14 +144,16 @@ class WorkoutTemplateControllerTests {
 
 	@Test
 	void deletesTemplate() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		mockMvc.perform(delete("/api/workout-templates/12"))
 				.andExpect(status().isNoContent());
 
-		verify(workoutTemplateService).delete(12L);
+		verify(workoutTemplateService).delete(12L, 1L);
 	}
 
 	@Test
 	void savesTemplateDisplayOrder() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		mockMvc.perform(put("/api/workout-templates/order")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""

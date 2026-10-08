@@ -150,8 +150,10 @@ features, such as owning a workout template or logging a workout, do not require
 - `PERSONAL_TRAINER`
 - `INDIVIDUAL`
 
-The email address uniquely identifies an account. Authentication fields are intentionally absent
-until the authentication design is implemented.
+The email address uniquely identifies an account. `auth_subject` stores the immutable Supabase
+user ID from the verified JWT. On first sign-in, SetForge links an existing local user by email or
+creates a local `INDIVIDUAL` profile. The column remains nullable while development users are
+migrated, and its unique index prevents two profiles from linking to the same identity.
 
 Relationships:
 

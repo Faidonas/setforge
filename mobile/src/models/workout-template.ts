@@ -51,10 +51,9 @@ export type CreateWorkoutTemplateExerciseRequest = {
 };
 
 export type CreateWorkoutTemplateRequest = {
-  ownerId: number;
   name: string;
   description?: string;
   exercises: CreateWorkoutTemplateExerciseRequest[];
 };
 
-export type UpdateWorkoutTemplateRequest = Omit<CreateWorkoutTemplateRequest, 'ownerId'>;
+export type UpdateWorkoutTemplateRequest = CreateWorkoutTemplateRequest;

@@ -20,7 +20,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RestTimerControl, formatRestTime } from '@/components/rest-timer-control';
 import { ReorderableExerciseList } from '@/components/reorderable-exercise-list';
-import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import {
   type ActiveExercise,
@@ -62,7 +61,6 @@ export function ActiveWorkoutSheet() {
   const [finishStep, setFinishStep] = useState<FinishStep>('closed');
   const cancellationPendingRef = useRef(false);
   const previousPerformances = usePreviousPerformances(
-    DEVELOPMENT_USER_ID,
     workout.exercises.map(({ exercise }) => exercise.id),
   );
 

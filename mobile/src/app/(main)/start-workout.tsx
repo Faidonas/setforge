@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import type { MenuAnchor } from '@/components/anchored-menu-modal';
-import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 import { WorkoutTemplateActionsModal } from '@/features/workouts/components/workout-template-actions-modal';
 import { WorkoutTemplateCard } from '@/features/workouts/components/workout-template-card';
@@ -51,7 +50,6 @@ export default function StartWorkoutScreen() {
 
   const createWorkout = async (template?: WorkoutTemplate) => {
     const session = await startWorkoutSession({
-      userId: DEVELOPMENT_USER_ID,
       templateId: template?.id,
     });
     activeWorkout.loadSession(session);
@@ -106,7 +104,7 @@ export default function StartWorkoutScreen() {
     setError(null);
 
     try {
-      setTemplates(await getWorkoutTemplates(DEVELOPMENT_USER_ID));
+      setTemplates(await getWorkoutTemplates());
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load workout templates.');
     } finally {
@@ -140,7 +138,6 @@ export default function StartWorkoutScreen() {
 
     const duplicateName = `${actionTemplate.name.slice(0, 95).trimEnd()} Copy`;
     const duplicatedTemplate = await createWorkoutTemplate({
-      ownerId: actionTemplate.ownerId,
       name: duplicateName,
       description: actionTemplate.description,
       exercises: toWriteExercises(actionTemplate),
@@ -158,10 +155,7 @@ export default function StartWorkoutScreen() {
     setError(null);
     reorderQueueRef.current = reorderQueueRef.current
       .catch(() => undefined)
-      .then(() => reorderWorkoutTemplates(
-        DEVELOPMENT_USER_ID,
-        normalizedTemplates.map((template) => template.id),
-      ))
+      .then(() => reorderWorkoutTemplates(normalizedTemplates.map((template) => template.id)))
       .catch((reorderError: unknown) => {
         setError(
           reorderError instanceof Error ? reorderError.message : 'Could not save the template order.',
@@ -201,7 +195,7 @@ export default function StartWorkoutScreen() {
   useEffect(() => {
     let isCurrent = true;
 
-    getWorkoutTemplates(DEVELOPMENT_USER_ID)
+    getWorkoutTemplates()
       .then((loadedTemplates) => {
         if (isCurrent) {
           setTemplates(loadedTemplates);

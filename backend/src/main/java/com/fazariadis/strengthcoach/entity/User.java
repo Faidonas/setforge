@@ -33,6 +33,9 @@ public class User {
 	@EqualsAndHashCode.Include
 	private Long id;
 
+	@Column(name = "auth_subject", unique = true, length = 100)
+	private String authSubject;
+
 	@Column(nullable = false, unique = true, length = 255)
 	private String email;
 

@@ -1,4 +1,16 @@
-# Welcome to your Expo app 👋
+# SetForge mobile and web client
+
+## Authentication setup
+
+Copy `.env.example` to `.env.local` and set the API URL plus the Supabase project URL and
+publishable key. In Supabase, disable open sign-ups for the invite-only phase and enable Google
+under Authentication providers. Add the deployed web origin and local Expo web origin to the
+allowed redirect URLs.
+For native builds, also allow `setforge://**` as a redirect URL.
+
+The backend also needs `SUPABASE_ISSUER_URI` and `SUPABASE_JWK_SET_URI`. Run
+`docs/database/migrations/2026-10-06-add-supabase-auth.sql` once against an existing database
+before starting the updated backend.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

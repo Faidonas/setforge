@@ -64,8 +64,8 @@ public class WorkoutTemplateService {
 	}
 
 	@Transactional
-	public WorkoutTemplateResponse update(Long templateId, UpdateWorkoutTemplateRequest request) {
-		WorkoutTemplate template = findTemplate(templateId);
+	public WorkoutTemplateResponse update(Long templateId, Long ownerId, UpdateWorkoutTemplateRequest request) {
+		WorkoutTemplate template = findTemplateForOwner(templateId, ownerId);
 		String name = request.getName().trim();
 		validateUniqueName(template.getOwner().getId(), name, templateId);
 		Map<Long, Exercise> exercisesById = loadExercises(request.getExercises());
@@ -92,12 +92,20 @@ public class WorkoutTemplateService {
 		return loadResponse(template);
 	}
 
+	public WorkoutTemplateResponse update(Long templateId, UpdateWorkoutTemplateRequest request) {
+		return update(templateId, findTemplate(templateId).getOwner().getId(), request);
+	}
+
 	@Transactional(readOnly = true)
-	public WorkoutTemplateResponse getById(Long templateId) {
-		return loadResponse(findTemplate(templateId));
+	public WorkoutTemplateResponse getById(Long templateId, Long ownerId) {
+		return loadResponse(findTemplateForOwner(templateId, ownerId));
 	}
 
 	@Transactional
+	public void delete(Long templateId, Long ownerId) {
+		workoutTemplateRepository.delete(findTemplateForOwner(templateId, ownerId));
+	}
+
 	public void delete(Long templateId) {
 		workoutTemplateRepository.delete(findTemplate(templateId));
 	}
@@ -150,6 +158,14 @@ public class WorkoutTemplateService {
 		return workoutTemplateRepository.findById(templateId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Workout template " + templateId + " was not found"));
+	}
+
+	private WorkoutTemplate findTemplateForOwner(Long templateId, Long ownerId) {
+		WorkoutTemplate template = findTemplate(templateId);
+		if (!template.getOwner().getId().equals(ownerId)) {
+			throw new ResourceNotFoundException("Workout template " + templateId + " was not found");
+		}
+		return template;
 	}
 
 	private void validateUniqueName(Long ownerId, String name, Long excludedTemplateId) {

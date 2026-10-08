@@ -11,7 +11,6 @@ import {
 import type { Exercise } from '@/models/exercise';
 import type { WorkoutSetType } from '@/models/workout-template';
 import type { WorkoutSession } from '@/models/workout-session';
-import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { getActiveWorkoutSession } from '@/services/workout-session-api';
 
 export type ActiveSet = {
@@ -151,7 +150,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
 
   const refreshActiveWorkout = useCallback(async () => {
     try {
-      const activeSession = await getActiveWorkoutSession(DEVELOPMENT_USER_ID);
+      const activeSession = await getActiveWorkoutSession();
       setHydrationError(null);
       if (activeSession) {
         loadSession(activeSession);
@@ -170,7 +169,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let current = true;
-    getActiveWorkoutSession(DEVELOPMENT_USER_ID)
+    getActiveWorkoutSession()
       .then((activeSession) => {
         if (!current) return;
         if (activeSession) {

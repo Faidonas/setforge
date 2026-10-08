@@ -5,8 +5,8 @@ import com.fazariadis.strengthcoach.dto.ReorderWorkoutTemplatesRequest;
 import com.fazariadis.strengthcoach.dto.UpdateWorkoutTemplateRequest;
 import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
 import com.fazariadis.strengthcoach.service.WorkoutTemplateService;
+import com.fazariadis.strengthcoach.service.AuthenticatedUserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,8 +23,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/workout-templates")
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkoutTemplateController {
 
     private final WorkoutTemplateService workoutTemplateService;
+    private final AuthenticatedUserService authenticatedUserService;
 
     @PostMapping
     @Operation(summary = "Create a workout template")
@@ -40,7 +42,9 @@ public class WorkoutTemplateController {
     @ApiResponse(responseCode = "400", description = "Request validation failed")
     @ApiResponse(responseCode = "404", description = "Owner or exercise was not found")
     public ResponseEntity<WorkoutTemplateResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateWorkoutTemplateRequest request) {
+        request.setOwnerId(authenticatedUserService.resolve(jwt).getId());
         WorkoutTemplateResponse response = workoutTemplateService.create(request);
         return ResponseEntity.created(URI.create("/api/workout-templates/" + response.getId()))
                 .body(response);
@@ -55,16 +59,17 @@ public class WorkoutTemplateController {
     @ApiResponse(responseCode = "404", description = "Template or exercise was not found")
     public WorkoutTemplateResponse update(
             @PathVariable Long templateId,
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateWorkoutTemplateRequest request) {
-        return workoutTemplateService.update(templateId, request);
+        return workoutTemplateService.update(templateId, authenticatedUserService.resolve(jwt).getId(), request);
     }
 
     @GetMapping("/{templateId}")
     @Operation(summary = "Get one workout template")
     @ApiResponse(responseCode = "200", description = "Workout template returned")
     @ApiResponse(responseCode = "404", description = "Workout template was not found")
-    public WorkoutTemplateResponse getById(@PathVariable Long templateId) {
-        return workoutTemplateService.getById(templateId);
+    public WorkoutTemplateResponse getById(@PathVariable Long templateId, @AuthenticationPrincipal Jwt jwt) {
+        return workoutTemplateService.getById(templateId, authenticatedUserService.resolve(jwt).getId());
     }
 
     @DeleteMapping("/{templateId}")
@@ -73,8 +78,8 @@ public class WorkoutTemplateController {
             description = "Deletes the template and its planned exercises and sets.")
     @ApiResponse(responseCode = "204", description = "Workout template deleted")
     @ApiResponse(responseCode = "404", description = "Workout template was not found")
-    public ResponseEntity<Void> delete(@PathVariable Long templateId) {
-        workoutTemplateService.delete(templateId);
+    public ResponseEntity<Void> delete(@PathVariable Long templateId, @AuthenticationPrincipal Jwt jwt) {
+        workoutTemplateService.delete(templateId, authenticatedUserService.resolve(jwt).getId());
         return ResponseEntity.noContent().build();
     }
 
@@ -83,7 +88,9 @@ public class WorkoutTemplateController {
     @ApiResponse(responseCode = "204", description = "Workout template order saved")
     @ApiResponse(responseCode = "400", description = "The order is incomplete or contains invalid templates")
     public ResponseEntity<Void> reorder(
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody ReorderWorkoutTemplatesRequest request) {
+        request.setOwnerId(authenticatedUserService.resolve(jwt).getId());
         workoutTemplateService.reorder(request);
         return ResponseEntity.noContent().build();
     }
@@ -92,9 +99,7 @@ public class WorkoutTemplateController {
     @Operation(summary = "List a user's workout templates")
     @ApiResponse(responseCode = "200", description = "Workout templates returned in display order")
     @ApiResponse(responseCode = "404", description = "User was not found")
-    public List<WorkoutTemplateResponse> getByOwner(
-            @Parameter(description = "Template owner identifier", example = "1")
-            @RequestParam Long ownerId) {
-        return workoutTemplateService.getByOwner(ownerId);
+    public List<WorkoutTemplateResponse> getByOwner(@AuthenticationPrincipal Jwt jwt) {
+        return workoutTemplateService.getByOwner(authenticatedUserService.resolve(jwt).getId());
     }
 }

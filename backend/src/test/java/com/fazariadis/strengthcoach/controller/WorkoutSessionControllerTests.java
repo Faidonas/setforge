@@ -19,6 +19,8 @@ import com.fazariadis.strengthcoach.dto.WorkoutSessionResponse;
 import com.fazariadis.strengthcoach.entity.enums.SetType;
 import com.fazariadis.strengthcoach.exception.ApiExceptionHandler;
 import com.fazariadis.strengthcoach.service.WorkoutSessionService;
+import com.fazariadis.strengthcoach.service.AuthenticatedUserService;
+import com.fazariadis.strengthcoach.entity.User;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -26,17 +28,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 
 class WorkoutSessionControllerTests {
 
 	private final WorkoutSessionService workoutSessionService = mock(WorkoutSessionService.class);
+	private final AuthenticatedUserService authenticatedUserService = mock(AuthenticatedUserService.class);
 	private final MockMvc mockMvc = MockMvcBuilders
-			.standaloneSetup(new WorkoutSessionController(workoutSessionService))
+			.standaloneSetup(new WorkoutSessionController(workoutSessionService, authenticatedUserService))
+			.setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
 			.setControllerAdvice(new ApiExceptionHandler())
 			.build();
 
 	@Test
 	void startsWorkoutFromCompletedSession() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		when(workoutSessionService.start(any(StartWorkoutSessionRequest.class)))
 				.thenReturn(WorkoutSessionResponse.builder()
 						.id(22L)
@@ -60,8 +66,9 @@ class WorkoutSessionControllerTests {
 
 	@Test
 	void updatesCompletedWorkout() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		when(workoutSessionService.updateCompleted(
-				org.mockito.ArgumentMatchers.eq(12L), any(UpdateWorkoutSessionRequest.class)))
+				org.mockito.ArgumentMatchers.eq(12L), org.mockito.ArgumentMatchers.eq(1L), any(UpdateWorkoutSessionRequest.class)))
 				.thenReturn(WorkoutSessionResponse.builder()
 						.id(12L)
 						.name("Updated Upper A")
@@ -82,22 +89,25 @@ class WorkoutSessionControllerTests {
 
 	@Test
 	void deletesSavedWorkout() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		mockMvc.perform(delete("/api/workout-sessions/12"))
 				.andExpect(status().isNoContent());
 
-		verify(workoutSessionService).deleteCompleted(12L);
+		verify(workoutSessionService).deleteCompleted(12L, 1L);
 	}
 
 	@Test
 	void cancelsAndDiscardsActiveWorkout() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		mockMvc.perform(post("/api/workout-sessions/12/cancel"))
 				.andExpect(status().isNoContent());
 
-		verify(workoutSessionService).cancel(12L);
+		verify(workoutSessionService).cancel(12L, 1L);
 	}
 
 	@Test
 	void getsPreviousExercisePerformances() throws Exception {
+		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		when(workoutSessionService.getPreviousPerformances(1L, List.of(10L, 11L)))
 				.thenReturn(List.of(PreviousExercisePerformanceResponse.builder()
 						.exerciseId(10L)
@@ -112,7 +122,6 @@ class WorkoutSessionControllerTests {
 						.build()));
 
 		mockMvc.perform(get("/api/workout-sessions/previous-performances")
-					.param("userId", "1")
 					.param("exerciseIds", "10,11"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].exerciseId").value(10))

@@ -79,6 +79,9 @@ public class WorkoutSessionService {
                 : workoutTemplateRepository.findById(request.getTemplateId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Workout template " + request.getTemplateId() + " was not found"));
+		if (template != null && !template.getOwner().getId().equals(user.getId())) {
+			throw new ResourceNotFoundException("Workout template " + request.getTemplateId() + " was not found");
+		}
 
 		WorkoutSession sourceSession = request.getSourceWorkoutSessionId() == null
 				? null
@@ -111,8 +114,8 @@ public class WorkoutSessionService {
     }
 
     @Transactional(readOnly = true)
-    public WorkoutSessionResponse getById(Long sessionId) {
-        return loadResponse(findSession(sessionId));
+    public WorkoutSessionResponse getById(Long sessionId, Long userId) {
+        return loadResponse(findSessionForUser(sessionId, userId));
     }
 
     @Transactional(readOnly = true)
@@ -186,8 +189,8 @@ public class WorkoutSessionService {
 
     @Transactional
     public WorkoutSessionResponse complete(
-            Long sessionId, CompleteWorkoutSessionRequest request) {
-        WorkoutSession session = requireInProgress(sessionId);
+            Long sessionId, Long userId, CompleteWorkoutSessionRequest request) {
+        WorkoutSession session = requireInProgress(sessionId, userId);
         Map<Long, Exercise> exercisesById = loadExercises(request.getExercises());
         validateResults(request.getExercises(), exercisesById);
 
@@ -202,8 +205,8 @@ public class WorkoutSessionService {
 
 	@Transactional
 	public WorkoutSessionResponse updateCompleted(
-			Long sessionId, UpdateWorkoutSessionRequest request) {
-		WorkoutSession session = findSession(sessionId);
+			Long sessionId, Long userId, UpdateWorkoutSessionRequest request) {
+		WorkoutSession session = findSessionForUser(sessionId, userId);
 		if (session.getStatus() != WorkoutSessionStatus.COMPLETED) {
 			throw new InvalidRequestException("Only a completed workout can be edited");
 		}
@@ -220,21 +223,32 @@ public class WorkoutSessionService {
 		return loadResponse(session);
 	}
 
+	public WorkoutSessionResponse updateCompleted(Long sessionId, UpdateWorkoutSessionRequest request) {
+		return updateCompleted(sessionId, findSession(sessionId).getUser().getId(), request);
+	}
+
 	@Transactional
-	public void deleteCompleted(Long sessionId) {
-		WorkoutSession session = findSession(sessionId);
+	public void deleteCompleted(Long sessionId, Long userId) {
+		WorkoutSession session = findSessionForUser(sessionId, userId);
 		if (session.getStatus() == WorkoutSessionStatus.IN_PROGRESS) {
 			throw new InvalidRequestException("An active workout must be cancelled before deletion");
 		}
 		workoutSessionRepository.delete(session);
 	}
 
+	public void deleteCompleted(Long sessionId) {
+		deleteCompleted(sessionId, findSession(sessionId).getUser().getId());
+	}
+
     @Transactional
-    public void cancel(Long sessionId) {
+    public void cancel(Long sessionId, Long userId) {
         WorkoutSession session = workoutSessionRepository.findById(sessionId).orElse(null);
         if (session == null) {
             return;
         }
+		if (!session.getUser().getId().equals(userId)) {
+			throw new ResourceNotFoundException("Workout session " + sessionId + " was not found");
+		}
         if (session.getStatus() != WorkoutSessionStatus.IN_PROGRESS) {
             throw new InvalidRequestException(
                     "Workout session " + sessionId + " is already "
@@ -243,8 +257,17 @@ public class WorkoutSessionService {
         workoutSessionRepository.delete(session);
     }
 
-    private WorkoutSession requireInProgress(Long sessionId) {
-        WorkoutSession session = findSession(sessionId);
+	public void cancel(Long sessionId) {
+		WorkoutSession session = workoutSessionRepository.findById(sessionId).orElse(null);
+		if (session == null) return;
+		if (session.getStatus() != WorkoutSessionStatus.IN_PROGRESS) {
+			throw new InvalidRequestException("Workout session " + sessionId + " is already " + session.getStatus().name().toLowerCase());
+		}
+		workoutSessionRepository.delete(session);
+	}
+
+    private WorkoutSession requireInProgress(Long sessionId, Long userId) {
+        WorkoutSession session = findSessionForUser(sessionId, userId);
         if (session.getStatus() != WorkoutSessionStatus.IN_PROGRESS) {
             throw new InvalidRequestException(
                     "Workout session " + sessionId + " is already "
@@ -258,6 +281,14 @@ public class WorkoutSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Workout session " + sessionId + " was not found"));
     }
+
+	private WorkoutSession findSessionForUser(Long sessionId, Long userId) {
+		WorkoutSession session = findSession(sessionId);
+		if (!session.getUser().getId().equals(userId)) {
+			throw new ResourceNotFoundException("Workout session " + sessionId + " was not found");
+		}
+		return session;
+	}
 
 	private String resolveSessionName(
 			String requestedName, WorkoutTemplate template, WorkoutSession sourceSession) {

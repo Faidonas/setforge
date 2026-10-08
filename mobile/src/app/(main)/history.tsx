@@ -4,7 +4,6 @@ import { ActivityIndicator, Alert, FlatList, Modal, Pressable, RefreshControl, S
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MenuAnchor } from '@/components/anchored-menu-modal';
-import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 import { WorkoutCalendarModal } from '@/features/workouts/history/workout-calendar-modal';
@@ -35,14 +34,14 @@ export default function WorkoutHistoryScreen() {
     if (refreshing) setIsRefreshing(true);
     else setIsLoading(true);
     setError(null);
-    try { setWorkouts(await getWorkoutHistory(DEVELOPMENT_USER_ID)); }
+    try { setWorkouts(await getWorkoutHistory()); }
     catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load workout history.'); }
     finally { setIsLoading(false); setIsRefreshing(false); }
   }, []);
 
   useEffect(() => {
     let current = true;
-    getWorkoutHistory(DEVELOPMENT_USER_ID)
+    getWorkoutHistory()
       .then((history) => { if (current) setWorkouts(history); })
       .catch((loadError: unknown) => { if (current) setError(loadError instanceof Error ? loadError.message : 'Could not load workout history.'); })
       .finally(() => { if (current) setIsLoading(false); });
@@ -77,7 +76,6 @@ export default function WorkoutHistoryScreen() {
     try {
       setError(null);
       const template = await createWorkoutTemplate({
-        ownerId: DEVELOPMENT_USER_ID,
         name: workout.name,
         description: `Created from workout completed ${formatWorkoutDate(
           workout.completedAt ?? workout.startedAt,
@@ -114,7 +112,7 @@ export default function WorkoutHistoryScreen() {
   const performAgain = async (workout: WorkoutSession) => {
     try {
       setIsStarting(true); setError(null); setShowConflict(false);
-      const session = await startWorkoutSession({ userId: DEVELOPMENT_USER_ID, sourceWorkoutSessionId: workout.id });
+      const session = await startWorkoutSession({ sourceWorkoutSessionId: workout.id });
       activeWorkout.loadSession(session); setRepeatWorkout(null);
       activeWorkout.expand();
     } catch (startError) { setError(startError instanceof Error ? startError.message : 'Could not start the workout.'); }
@@ -127,7 +125,7 @@ export default function WorkoutHistoryScreen() {
       setIsStarting(true);
       await cancelWorkoutSession(activeWorkout.session.id);
       activeWorkout.reset();
-      const session = await startWorkoutSession({ userId: DEVELOPMENT_USER_ID, sourceWorkoutSessionId: repeatWorkout.id });
+      const session = await startWorkoutSession({ sourceWorkoutSessionId: repeatWorkout.id });
       activeWorkout.loadSession(session); setShowConflict(false); setRepeatWorkout(null);
       activeWorkout.expand();
     } catch (startError) {

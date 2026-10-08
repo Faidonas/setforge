@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RestTimerControl, formatRestTime } from '@/components/rest-timer-control';
 import { ReorderableExerciseList } from '@/components/reorderable-exercise-list';
-import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import {
   formatPreviousResult,
@@ -48,7 +47,6 @@ export default function EditWorkoutScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousPerformances = usePreviousPerformances(
-    DEVELOPMENT_USER_ID,
     exercises.map(({ exerciseId }) => exerciseId),
   );
 

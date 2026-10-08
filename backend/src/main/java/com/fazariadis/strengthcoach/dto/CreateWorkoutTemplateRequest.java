@@ -19,8 +19,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateWorkoutTemplateRequest {
 
-	@NotNull
-	@Schema(description = "User who owns the template", example = "1")
+	@Schema(hidden = true)
 	private Long ownerId;
 
 	@NotBlank

@@ -43,7 +43,6 @@ export type WorkoutSession = {
 };
 
 export type StartWorkoutSessionRequest = {
-  userId: number;
   templateId?: number;
   sourceWorkoutSessionId?: number;
   name?: string;

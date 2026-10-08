@@ -30,15 +30,12 @@ import type { PreviousExercisePerformance } from '@/models/workout-session';
 import { getExerciseAssetUrl } from '@/services/exercise-api';
 import { createWorkoutTemplate } from '@/services/workout-template-api';
 
-const DEVELOPMENT_OWNER_ID = 1;
-
 export default function CreateTemplateScreen() {
   const router = useRouter();
   const draft = useCreateTemplateDraft();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousPerformances = usePreviousPerformances(
-    DEVELOPMENT_OWNER_ID,
     draft.exercises.map(({ exercise }) => exercise.id),
   );
 
@@ -61,7 +58,6 @@ export default function CreateTemplateScreen() {
       setError(null);
 
       await createWorkoutTemplate({
-        ownerId: DEVELOPMENT_OWNER_ID,
         name: trimmedName,
         description: draft.description.trim() || undefined,
         exercises,

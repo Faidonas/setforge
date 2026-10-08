@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DEVELOPMENT_USER_ID } from '@/constants/development';
 import { SetForgeColors } from '@/constants/setforge-theme';
+import { useAuth } from '@/features/auth/auth-context';
 import type { UserProfile } from '@/models/user';
 import { getUserProfile } from '@/services/user-api';
 import { getWorkoutHistory } from '@/services/workout-session-api';
@@ -26,9 +26,9 @@ type ProfileData = {
 
 async function fetchProfileData(): Promise<ProfileData> {
   const [user, workouts, templates] = await Promise.all([
-    getUserProfile(DEVELOPMENT_USER_ID),
-    getWorkoutHistory(DEVELOPMENT_USER_ID),
-    getWorkoutTemplates(DEVELOPMENT_USER_ID),
+    getUserProfile(),
+    getWorkoutHistory(),
+    getWorkoutTemplates(),
   ]);
 
   return {
@@ -49,6 +49,7 @@ async function fetchProfileData(): Promise<ProfileData> {
 }
 
 export default function ProfileScreen() {
+  const auth = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -171,6 +172,10 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             ) : null}
+
+            <Pressable onPress={() => void auth.signOut()} style={styles.signOutButton}>
+              <Text style={styles.signOutLabel}>SIGN OUT</Text>
+            </Pressable>
           </ScrollView>
         ) : null}
       </View>
@@ -340,4 +345,6 @@ const styles = StyleSheet.create({
   stateMessage: { color: SetForgeColors.textSecondary, fontSize: 13, lineHeight: 18, textAlign: 'center' },
   retryButton: { paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1, borderColor: SetForgeColors.accent, borderRadius: 5 },
   retryLabel: { color: SetForgeColors.accent, fontSize: 12, fontWeight: '800' },
+  signOutButton: { height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#7F1D1D', borderRadius: 8 },
+  signOutLabel: { color: '#F87171', fontSize: 12, fontWeight: '900' },
 });

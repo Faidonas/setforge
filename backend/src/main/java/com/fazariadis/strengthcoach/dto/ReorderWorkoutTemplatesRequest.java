@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReorderWorkoutTemplatesRequest {
 
-	@NotNull
+	@Schema(hidden = true)
 	private Long ownerId;
 
 	@NotNull

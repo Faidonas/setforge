@@ -1,38 +1,10 @@
 import type { Exercise } from '@/models/exercise';
+import { apiJson } from '@/services/api-client';
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
-function getBaseUrl(): string {
-  if (!apiUrl) {
-    throw new Error(
-      'The API URL is not configured. Set EXPO_PUBLIC_API_URL in your Expo environment.',
-    );
-  }
-
-  return apiUrl.replace(/\/$/, '');
-}
-
 async function requestExerciseApi(path: string): Promise<unknown> {
-  const baseUrl = getBaseUrl();
-
-  let response: Response;
-
-  try {
-    response = await fetch(`${baseUrl}${path}`);
-  } catch {
-    throw new Error('Could not connect to the exercise API. Check the API URL and your network.');
-  }
-
-  if (!response.ok) {
-    const responseDetails = await response.text().catch(() => '');
-    const details = responseDetails ? `: ${responseDetails}` : '';
-
-    throw new Error(
-      `The exercise API returned ${response.status} ${response.statusText}${details}`.trim(),
-    );
-  }
-
-  return response.json();
+  return apiJson(path);
 }
 
 export async function getExercises(): Promise<Exercise[]> {

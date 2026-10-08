@@ -1,7 +1,6 @@
 package com.fazariadis.strengthcoach.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +14,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StartWorkoutSessionRequest {
 
-	@NotNull
 	private Long userId;
 
 	@Schema(description = "Optional template to copy into the workout")
