@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { useAuth } from '@/features/auth/auth-context';
@@ -50,10 +52,23 @@ async function fetchProfileData(): Promise<ProfileData> {
 
 export default function ProfileScreen() {
   const auth = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function signOut() {
+    setIsSigningOut(true);
+    setError(null);
+    try {
+      await auth.signOut();
+    } catch (signOutError) {
+      setError(signOutError instanceof Error ? signOutError.message : 'Could not sign out.');
+      setIsSigningOut(false);
+    }
+  }
 
   const loadProfile = useCallback(async (refreshing = false) => {
     if (refreshing) setIsRefreshing(true);
@@ -94,8 +109,17 @@ export default function ProfileScreen() {
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>Your SetForge account and training overview</Text>
+          <View style={styles.headerCopy}>
+            <Text style={styles.title}>Profile</Text>
+            <Text style={styles.subtitle}>Your SetForge account and training overview</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSigningOut}
+            onPress={() => void signOut()}
+            style={({ pressed }) => [styles.headerSignOut, (pressed || isSigningOut) && styles.pressed]}>
+            <Text style={styles.headerSignOutLabel}>{isSigningOut ? 'SIGNING OUT…' : 'SIGN OUT'}</Text>
+          </Pressable>
         </View>
 
         {isLoading ? (
@@ -148,7 +172,7 @@ export default function ProfileScreen() {
             <ProfileSection title="ACCOUNT">
               <ProfileRow label="Email" value={profile.user.email} />
               <View style={styles.rowDivider} />
-              <ProfileRow label="Account type" value={formatAccountType(profile.user.accountType)} />
+              <ProfileRow label="Access" value={formatAccountType(profile.user.accountType)} />
               <View style={styles.rowDivider} />
               <ProfileRow label="Member since" value={formatMemberSince(profile.user.createdAt)} />
             </ProfileSection>
@@ -162,20 +186,19 @@ export default function ProfileScreen() {
             {profile.user.accountType === 'PERSONAL_TRAINER' ? (
               <View style={styles.trainerCard}>
                 <View style={styles.trainerCardHeader}>
-                  <Text style={styles.trainerTitle}>Trainer workspace</Text>
-                  <View style={styles.soonBadge}>
-                    <Text style={styles.soonLabel}>SOON</Text>
-                  </View>
+                  <Text style={styles.trainerTitle}>Coach workspace</Text>
                 </View>
                 <Text style={styles.trainerMessage}>
-                  Client management and coaching tools will appear here as SetForge grows.
+                  Manage clients and templates while keeping your own workouts in this account.
                 </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/coach' as Href)}
+                  style={({ pressed }) => [styles.coachButton, pressed && styles.pressed]}>
+                  <Text style={styles.coachButtonLabel}>OPEN COACH DASHBOARD</Text>
+                </Pressable>
               </View>
             ) : null}
-
-            <Pressable onPress={() => void auth.signOut()} style={styles.signOutButton}>
-              <Text style={styles.signOutLabel}>SIGN OUT</Text>
-            </Pressable>
           </ScrollView>
         ) : null}
       </View>
@@ -248,7 +271,7 @@ function getInitials(displayName: string) {
 }
 
 function formatAccountType(accountType: UserProfile['accountType']) {
-  return accountType === 'PERSONAL_TRAINER' ? 'Personal Trainer' : 'Individual';
+  return accountType === 'PERSONAL_TRAINER' ? 'Athlete + Coach' : 'Athlete';
 }
 
 function formatMemberSince(createdAt: string) {
@@ -260,9 +283,12 @@ function formatMemberSince(createdAt: string) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: SetForgeColors.canvas },
   screen: { flex: 1, width: '100%', maxWidth: 440, alignSelf: 'center' },
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerCopy: { flex: 1 },
   title: { color: SetForgeColors.textPrimary, fontSize: 24, fontWeight: '800' },
   subtitle: { marginTop: 3, color: SetForgeColors.textSecondary, fontSize: 13 },
+  headerSignOut: { minWidth: 76, height: 36, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#7F1D1D', borderRadius: 7 },
+  headerSignOutLabel: { color: '#F87171', fontSize: 10, fontWeight: '900' },
   content: { gap: 20, paddingHorizontal: 20, paddingBottom: 30 },
   inlineError: {
     padding: 10,
@@ -337,14 +363,13 @@ const styles = StyleSheet.create({
   },
   trainerCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   trainerTitle: { color: SetForgeColors.textPrimary, fontSize: 15, fontWeight: '800' },
-  soonBadge: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 4, backgroundColor: SetForgeColors.surfaceMuted },
-  soonLabel: { color: SetForgeColors.accent, fontSize: 9, fontWeight: '900' },
   trainerMessage: { marginTop: 8, color: SetForgeColors.textSecondary, fontSize: 12, lineHeight: 17 },
+  coachButton: { height: 42, marginTop: 14, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: SetForgeColors.accent },
+  coachButtonLabel: { color: SetForgeColors.canvas, fontSize: 11, fontWeight: '900' },
   stateContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 28 },
   stateTitle: { color: SetForgeColors.textPrimary, fontSize: 16, fontWeight: '700', textAlign: 'center' },
   stateMessage: { color: SetForgeColors.textSecondary, fontSize: 13, lineHeight: 18, textAlign: 'center' },
   retryButton: { paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1, borderColor: SetForgeColors.accent, borderRadius: 5 },
   retryLabel: { color: SetForgeColors.accent, fontSize: 12, fontWeight: '800' },
-  signOutButton: { height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#7F1D1D', borderRadius: 8 },
-  signOutLabel: { color: '#F87171', fontSize: 12, fontWeight: '900' },
+  pressed: { opacity: 0.7 },
 });

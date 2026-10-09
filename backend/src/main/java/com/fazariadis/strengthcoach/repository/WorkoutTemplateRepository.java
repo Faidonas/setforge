@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkoutTemplateRepository extends JpaRepository<WorkoutTemplate, Long> {
 
+	long countByOwner_Id(Long ownerId);
+
 	boolean existsByOwner_IdAndNameIgnoreCase(Long ownerId, String name);
 
 	boolean existsByOwner_IdAndNameIgnoreCaseAndIdNot(Long ownerId, String name, Long templateId);

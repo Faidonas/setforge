@@ -1,41 +1,32 @@
-import { useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
-import { coachClients } from '@/features/coach/coach-data';
-import { ActionButton, CoachShell, PageHeading, Panel, StatusBadge, coachStyles } from '@/features/coach/coach-ui';
+import { CoachShell, PageHeading, Panel, StatusBadge, coachStyles } from '@/features/coach/coach-ui';
+import { useCoachResource } from '@/features/coach/use-coach-resource';
+import { getCoachClients } from '@/services/coach-api';
 
-const searchIcon = require('@/assets/images/coach-web/search.svg');
-const moreIcon = require('@/assets/images/coach-web/more-horizontal.svg');
+function initials(name: string) { return name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(); }
+function when(value: string | null) { return value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value)) : 'Never'; }
 
 export default function ClientsScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const clients = useMemo(() => coachClients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase())), [query]);
-  return (
-    <CoachShell>
-      <View style={coachStyles.page}>
-        <PageHeading title="Clients" subtitle="Manage programs, monitor adherence, and keep every client moving forward." actions={<><ActionButton label="Export CSV" secondary /><ActionButton label="Invite client" /></>} />
-        <View style={styles.summary}><Text style={styles.summaryAccent}>24 ACTIVE CLIENTS</Text><Text style={styles.summaryItem}>3 NEED ATTENTION</Text><Text style={styles.summaryItem}>2 PAUSED</Text><Text style={styles.summaryItem}>89% AVG. ADHERENCE</Text></View>
-        <View style={styles.filters}><View style={styles.clientSearch}><Image source={searchIcon} style={styles.icon} contentFit="contain" /><TextInput accessibilityLabel="Search clients" onChangeText={setQuery} placeholder="Search clients by name or email…" placeholderTextColor={SetForgeColors.textSecondary} style={styles.input} value={query} /></View>{['All goals ⌄','All statuses ⌄','All programs ⌄'].map(label=><View key={label} style={styles.chip}><Text style={styles.chipText}>{label}</Text></View>)}</View>
-        <Panel style={styles.tablePanel}>
-          <ScrollView horizontal contentContainerStyle={styles.tableWidth} showsHorizontalScrollIndicator={false}>
-            <View>
-              <View style={styles.tableHeader}><Text style={[styles.headerText,styles.clientCol]}>CLIENT ↕</Text><Text style={[styles.headerText,styles.goalCol]}>GOAL</Text><Text style={[styles.headerText,styles.programCol]}>ASSIGNED PROGRAM</Text><Text style={[styles.headerText,styles.adherenceCol]}>ADHERENCE ↓</Text><Text style={[styles.headerText,styles.lastCol]}>LAST WORKOUT</Text><Text style={[styles.headerText,styles.statusCol]}>STATUS</Text><View style={styles.moreCol} /></View>
-              {clients.map((client) => <Pressable key={client.id} onPress={() => router.push(`/coach/clients/${client.id}` as Href)} style={({pressed})=>[styles.clientRow,pressed&&styles.pressed]}>
-                <View style={[styles.clientIdentity,styles.clientCol]}><View style={styles.avatar}><Text style={styles.initials}>{client.initials}</Text></View><View><Text style={styles.clientName}>{client.name}</Text><Text style={styles.email}>{client.email}</Text></View></View>
-                <Text style={[styles.cellMuted,styles.goalCol]}>{client.goal}</Text><Text style={[styles.cell,styles.programCol]}>{client.program}</Text><Text style={[styles.adherence,styles.adherenceCol]}>{client.adherence}</Text><Text style={[styles.last,styles.lastCol]}>{client.lastWorkout}</Text><View style={styles.statusCol}><StatusBadge tone={client.status==='At risk'?'warning':client.status==='Paused'?'muted':'accent'}>{client.status}</StatusBadge></View><View style={styles.moreCol}><Image source={moreIcon} style={styles.icon} contentFit="contain" /></View>
-              </Pressable>)}
-            </View>
-          </ScrollView>
-          <View style={styles.pagination}><Text style={styles.paginationText}>SHOWING 1–{clients.length} OF 26 CLIENTS • ADHERENCE: LAST 28 DAYS</Text><View style={styles.pages}><Text style={styles.pageMuted}>← Previous</Text><StatusBadge>1</StatusBadge><Text style={styles.pageMuted}>2</Text><Text style={styles.pageMuted}>3</Text><Text style={styles.next}>Next →</Text></View></View>
-        </Panel>
-      </View>
-    </CoachShell>
-  );
+  const { data, error, loading } = useCoachResource(getCoachClients);
+  const clients = useMemo(() => (data ?? []).filter(client => `${client.displayName} ${client.email}`.toLowerCase().includes(query.trim().toLowerCase())), [data, query]);
+  return <CoachShell><View style={coachStyles.page}>
+    <PageHeading title="Clients" subtitle="Live active-client performance from SetForge." />
+    <View style={styles.summary}><Text style={styles.summaryAccent}>{data?.length ?? 0} ACTIVE CLIENTS</Text><Text style={styles.summaryItem}>{data?.reduce((sum, client) => sum + client.completedWorkoutsLast28Days, 0) ?? 0} WORKOUTS · LAST 28D</Text></View>
+    <TextInput accessibilityLabel="Search clients" onChangeText={setQuery} placeholder="Search clients by name or email…" placeholderTextColor={SetForgeColors.textSecondary} style={styles.search} value={query}/>
+    <Panel style={styles.tablePanel}><ScrollView horizontal contentContainerStyle={styles.tableWidth} showsHorizontalScrollIndicator={false}><View>
+      <View style={styles.tableHeader}><Text style={[styles.head,styles.clientCol]}>CLIENT</Text><Text style={[styles.head,styles.sinceCol]}>COACHING SINCE</Text><Text style={[styles.head,styles.workoutsCol]}>WORKOUTS · 28D</Text><Text style={[styles.head,styles.lastCol]}>LAST WORKOUT</Text><Text style={[styles.head,styles.statusCol]}>STATUS</Text></View>
+      {loading ? <Text style={styles.state}>Loading clients…</Text> : null}{error ? <Text style={styles.error}>{error}</Text> : null}
+      {!loading && !error && !clients.length ? <Text style={styles.state}>No active clients match this view.</Text> : null}
+      {clients.map(client => <Pressable key={client.id} onPress={() => router.push(`/coach/clients/${client.id}` as Href)} style={({pressed}) => [styles.row, pressed && styles.pressed]}><View style={[styles.identity,styles.clientCol]}><View style={styles.avatar}><Text style={styles.initials}>{initials(client.displayName)}</Text></View><View><Text style={styles.name}>{client.displayName}</Text><Text style={styles.email}>{client.email}</Text></View></View><Text style={[styles.cell,styles.sinceCol]}>{when(client.coachingSince)}</Text><Text style={[styles.workouts,styles.workoutsCol]}>{client.completedWorkoutsLast28Days}</Text><View style={styles.lastCol}><Text style={styles.name}>{client.lastWorkoutName ?? 'No completed workouts'}</Text><Text style={styles.email}>{when(client.lastWorkoutAt)}</Text></View><View style={styles.statusCol}><StatusBadge>{client.relationshipStatus}</StatusBadge></View></Pressable>)}
+    </View></ScrollView></Panel>
+  </View></CoachShell>;
 }
 
-const styles=StyleSheet.create({summary:{flexDirection:'row',gap:32},summaryAccent:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:12},summaryItem:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:12},filters:{height:48,flexDirection:'row',alignItems:'center',gap:16},clientSearch:{width:360,height:48,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:8,backgroundColor:SetForgeColors.surface},icon:{width:18,height:18},input:{flex:1,color:SetForgeColors.textPrimary,fontSize:14,outlineStyle:'none'} as never,chip:{paddingHorizontal:16,paddingVertical:8,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:999,backgroundColor:SetForgeColors.surface},chipText:{color:SetForgeColors.textSecondary,fontSize:12},tablePanel:{overflow:'hidden'},tableWidth:{minWidth:1134},tableHeader:{height:48,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16},headerText:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},clientRow:{height:64,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16,borderTopWidth:1,borderTopColor:SetForgeColors.border},pressed:{backgroundColor:'rgba(0,240,255,.04)'},clientIdentity:{flexDirection:'row',alignItems:'center',gap:12},clientCol:{width:240},goalCol:{width:136},programCol:{width:192},adherenceCol:{width:104},lastCol:{width:144},statusCol:{width:88},moreCol:{width:18},avatar:{width:32,height:32,borderRadius:16,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:SetForgeColors.border},initials:{color:SetForgeColors.textPrimary,fontFamily:'monospace',fontSize:11},clientName:{color:SetForgeColors.textPrimary,fontSize:13,fontWeight:'700'},email:{color:SetForgeColors.textSecondary,fontSize:10},cell:{color:SetForgeColors.textPrimary,fontSize:12},cellMuted:{color:SetForgeColors.textSecondary,fontSize:12},adherence:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:13},last:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},pagination:{height:64,padding:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderTopWidth:1,borderTopColor:SetForgeColors.border},paginationText:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:11},pages:{flexDirection:'row',alignItems:'center',gap:16},pageMuted:{color:SetForgeColors.textSecondary,fontSize:12},next:{color:SetForgeColors.accent,fontSize:12}});
+const styles=StyleSheet.create({summary:{flexDirection:'row',gap:32},summaryAccent:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:12},summaryItem:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:12},search:{width:420,height:48,paddingHorizontal:16,color:SetForgeColors.textPrimary,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:8,backgroundColor:SetForgeColors.surface,outlineStyle:'none'} as never,tablePanel:{overflow:'hidden'},tableWidth:{minWidth:1100},tableHeader:{height:48,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16},head:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},row:{height:70,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16,borderTopWidth:1,borderTopColor:SetForgeColors.border},pressed:{backgroundColor:'rgba(0,240,255,.04)'},identity:{flexDirection:'row',alignItems:'center',gap:12},clientCol:{width:280},sinceCol:{width:170},workoutsCol:{width:140},lastCol:{width:250},statusCol:{width:100},avatar:{width:34,height:34,borderRadius:17,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:SetForgeColors.border},initials:{color:SetForgeColors.textPrimary,fontFamily:'monospace',fontSize:10},name:{color:SetForgeColors.textPrimary,fontSize:12,fontWeight:'700'},email:{marginTop:3,color:SetForgeColors.textSecondary,fontSize:10},cell:{color:SetForgeColors.textSecondary,fontSize:11},workouts:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:14},state:{padding:24,color:SetForgeColors.textSecondary,fontSize:12},error:{padding:24,color:'#FF8A98',fontSize:12}});

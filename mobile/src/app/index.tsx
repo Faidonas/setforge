@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors, SetForgeSpacing } from '@/constants/setforge-theme';
 import { RoleOptionCard } from '@/features/onboarding/components/role-option-card';
+import { updateAccountType } from '@/services/user-api';
 
 const trainMyselfIcon = require('@/assets/images/figma/user.svg');
 const personalTrainerIcon = require('@/assets/images/figma/users.svg');
@@ -14,6 +15,21 @@ const personalTrainerIcon = require('@/assets/images/figma/users.svg');
 export default function WelcomeRoleSelectionScreen() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<'athlete' | 'coach'>('athlete');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function continueToWorkspace() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateAccountType(selectedRole === 'coach' ? 'PERSONAL_TRAINER' : 'INDIVIDUAL');
+      router.push((selectedRole === 'coach' ? '/coach' : '/start-workout') as Href);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not save your account type.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -44,10 +60,12 @@ export default function WelcomeRoleSelectionScreen() {
         <View style={styles.footer}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push((selectedRole === 'coach' ? '/coach' : '/start-workout') as Href)}
-            style={styles.continueButton}>
-            <Text style={styles.continueLabel}>CONTINUE</Text>
+            disabled={saving}
+            onPress={() => void continueToWorkspace()}
+            style={({ pressed }) => [styles.continueButton, (pressed || saving) && styles.continueDisabled]}>
+            <Text style={styles.continueLabel}>{saving ? 'SAVING…' : 'CONTINUE'}</Text>
           </Pressable>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
           <Text style={styles.footnote}>You can change this later in Settings.</Text>
         </View>
       </View>
@@ -125,6 +143,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '700',
   },
+  continueDisabled: { opacity: 0.65 },
+  error: { color: '#FF6B7C', fontSize: 11, lineHeight: 16, textAlign: 'center' },
   footnote: {
     width: '100%',
     color: SetForgeColors.textDisabled,

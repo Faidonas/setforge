@@ -27,6 +27,12 @@ public class ApiExceptionHandler {
 		return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request, Map.of());
 	}
 
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<ApiErrorResponse> handleForbidden(
+			ForbiddenOperationException exception, HttpServletRequest request) {
+		return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request, Map.of());
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(
 			MethodArgumentNotValidException exception, HttpServletRequest request) {

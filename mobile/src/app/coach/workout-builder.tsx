@@ -1,13 +1,59 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import type { Href } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { ActionButton, CoachShell, PageHeading, Panel, StatusBadge, coachStyles } from '@/features/coach/coach-ui';
+import { useCoachResource } from '@/features/coach/use-coach-resource';
+import { getExercises } from '@/services/exercise-api';
+import { createWorkoutTemplate } from '@/services/workout-template-api';
 
-const blocks = [
-  { name: 'Bench Press', sets: [['1','8','70 kg'],['2','8','70 kg'],['3','8','70 kg']] },
-  { name: 'Incline Dumbbell Press', sets: [['1','10','24 kg'],['2','10','24 kg'],['3','10','24 kg']] },
-  { name: 'Cable Row', sets: [['1','12','55 kg'],['2','12','55 kg'],['3','12','55 kg']] },
-];
+export default function WorkoutBuilderScreen() {
+  const router = useRouter();
+  const { data: exercises, error: exerciseError, loading } = useCoachResource(getExercises);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const selected = useMemo(() => (exercises ?? []).filter(exercise => selectedIds.includes(exercise.id)), [exercises, selectedIds]);
 
-export default function WorkoutBuilderScreen(){return <CoachShell><View style={coachStyles.page}><PageHeading title="Workout builder" subtitle="Create a structured session with clear progression targets." actions={<><ActionButton label="Save draft" secondary/><ActionButton label="Publish template"/></>}/><View style={styles.columns}><View style={styles.main}><Panel style={styles.form}><Text style={styles.label}>WORKOUT NAME</Text><TextInput defaultValue="Upper Body A" style={styles.input}/><View style={styles.two}><View style={styles.field}><Text style={styles.label}>TRAINING FOCUS</Text><TextInput defaultValue="Strength / hypertrophy" style={styles.input}/></View><View style={styles.field}><Text style={styles.label}>EST. DURATION</Text><TextInput defaultValue="55 minutes" style={styles.input}/></View></View></Panel>{blocks.map((block,index)=><Panel key={block.name} style={styles.exercise}><View style={styles.exerciseHeader}><View><Text style={styles.order}>EXERCISE {index+1}</Text><Text style={styles.exerciseName}>{block.name}</Text></View><Text style={styles.more}>•••</Text></View><View style={styles.setHead}><Text style={styles.setNo}>SET</Text><Text style={styles.setCell}>REPS</Text><Text style={styles.setCell}>LOAD</Text><Text style={styles.setWide}>COACHING NOTE</Text></View>{block.sets.map(set=><View key={set[0]} style={styles.setRow}><Text style={styles.setNo}>{set[0]}</Text><TextInput defaultValue={set[1]} style={[styles.setInput,styles.setCell]}/><TextInput defaultValue={set[2]} style={[styles.setInput,styles.setCell]}/><TextInput placeholder="Optional cue…" placeholderTextColor={SetForgeColors.textDisabled} style={[styles.setInput,styles.setWide]}/></View>)}<Text style={styles.addSet}>+ ADD SET</Text></Panel>)}</View><View style={styles.rail}><Panel style={styles.summary}><Text style={coachStyles.sectionTitle}>Template summary</Text><View style={styles.summaryRow}><Text style={styles.muted}>Exercises</Text><Text style={styles.value}>3</Text></View><View style={styles.summaryRow}><Text style={styles.muted}>Working sets</Text><Text style={styles.value}>9</Text></View><View style={styles.summaryRow}><Text style={styles.muted}>Estimated time</Text><Text style={styles.value}>55m</Text></View><View style={styles.line}/><StatusBadge>Draft</StatusBadge><Text style={styles.copy}>Changes are saved locally while you build this workout.</Text></Panel><Panel style={styles.summary}><Text style={coachStyles.sectionTitle}>Exercise library</Text><TextInput placeholder="Search exercises…" placeholderTextColor={SetForgeColors.textSecondary} style={styles.input}/>{['Overhead Press','Lat Pulldown','Lateral Raise','Triceps Extension'].map(x=><View key={x} style={styles.libraryRow}><Text style={styles.value}>{x}</Text><Text style={styles.add}>+</Text></View>)}</Panel></View></View></View></CoachShell>}
-const styles=StyleSheet.create({columns:{flexDirection:'row',gap:24,alignItems:'flex-start'},main:{flex:1,gap:16},rail:{width:320,gap:16},form:{padding:24,gap:10},label:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:9},input:{height:44,paddingHorizontal:14,color:SetForgeColors.textPrimary,fontSize:13,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:7,backgroundColor:SetForgeColors.canvas,outlineStyle:'none'} as never,two:{flexDirection:'row',gap:16},field:{flex:1,gap:8},exercise:{padding:20},exerciseHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:16},order:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:9},exerciseName:{marginTop:4,color:SetForgeColors.textPrimary,fontSize:17,fontWeight:'800'},more:{color:SetForgeColors.textSecondary},setHead:{height:32,flexDirection:'row',alignItems:'center',gap:10,borderTopWidth:1,borderTopColor:SetForgeColors.border},setRow:{height:48,flexDirection:'row',alignItems:'center',gap:10},setNo:{width:40,color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},setCell:{width:90},setWide:{flex:1},setInput:{height:36,paddingHorizontal:10,color:SetForgeColors.textPrimary,fontSize:12,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:6,backgroundColor:SetForgeColors.canvas,outlineStyle:'none'} as never,addSet:{marginTop:8,color:SetForgeColors.accent,fontSize:11,fontWeight:'800'},summary:{padding:20,gap:16},summaryRow:{flexDirection:'row',justifyContent:'space-between'},muted:{color:SetForgeColors.textSecondary,fontSize:11},value:{color:SetForgeColors.textPrimary,fontSize:12,fontWeight:'700'},line:{height:1,backgroundColor:SetForgeColors.border},copy:{color:SetForgeColors.textSecondary,fontSize:11,lineHeight:17},libraryRow:{height:42,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderTopWidth:1,borderTopColor:SetForgeColors.border},add:{color:SetForgeColors.accent,fontSize:18}});
+  function toggleExercise(exerciseId: number) {
+    setSelectedIds(current => current.includes(exerciseId) ? current.filter(id => id !== exerciseId) : [...current, exerciseId]);
+  }
+
+  async function saveTemplate() {
+    if (!name.trim()) { setSaveError('Enter a template name.'); return; }
+    if (!selected.length) { setSaveError('Select at least one exercise.'); return; }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await createWorkoutTemplate({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        exercises: selected.map(exercise => ({
+          exerciseId: exercise.id,
+          sets: Array.from({ length: 3 }, () => exercise.exerciseType === 'TIMED'
+            ? { setType: 'NORMAL' as const, targetTimeSeconds: 60, restSeconds: 60 }
+            : { setType: 'NORMAL' as const, targetReps: 8, restSeconds: 90 }),
+        })),
+      });
+      router.replace('/coach/templates' as Href);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this template.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <CoachShell><View style={coachStyles.page}>
+    <PageHeading title="Workout builder" subtitle="Create a reusable template in your SetForge account." actions={<><ActionButton label="Cancel" secondary onPress={() => router.back()}/><ActionButton label={saving ? 'Saving…' : 'Save template'} onPress={() => void saveTemplate()}/></>} />
+    {saveError || exerciseError ? <Panel style={styles.error}><Text style={styles.errorText}>{saveError ?? exerciseError}</Text></Panel> : null}
+    <View style={styles.columns}><Panel style={styles.form}><Text style={styles.label}>TEMPLATE NAME</Text><TextInput onChangeText={setName} placeholder="e.g. Upper Body A" placeholderTextColor={SetForgeColors.textDisabled} style={styles.input} value={name}/><Text style={styles.label}>DESCRIPTION</Text><TextInput multiline onChangeText={setDescription} placeholder="Training focus and coaching context…" placeholderTextColor={SetForgeColors.textDisabled} style={styles.textarea} value={description}/><View style={styles.line}/><View style={styles.header}><Text style={coachStyles.sectionTitle}>Selected exercises</Text><StatusBadge>{selected.length}</StatusBadge></View>{selected.length ? selected.map((exercise, index) => <View key={exercise.id} style={styles.selectedRow}><View><Text style={styles.order}>EXERCISE {index + 1}</Text><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.muted}>3 sets · {exercise.exerciseType === 'TIMED' ? '60 seconds' : '8 reps'}</Text></View><Text onPress={() => toggleExercise(exercise.id)} style={styles.remove}>REMOVE</Text></View>) : <Text style={styles.empty}>Choose exercises from the library.</Text>}</Panel>
+      <Panel style={styles.library}><Text style={coachStyles.sectionTitle}>Exercise library</Text><Text style={styles.muted}>{loading ? 'Loading exercises…' : 'Click an exercise to add or remove it.'}</Text>{exercises?.map(exercise => { const active = selectedIds.includes(exercise.id); return <Pressable key={exercise.id} onPress={() => toggleExercise(exercise.id)} style={({pressed}) => [styles.libraryRow, active && styles.libraryRowActive, pressed && styles.pressed]}><View><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.muted}>{exercise.primaryMuscle} · {exercise.equipment}</Text></View><Text style={styles.add}>{active ? '✓' : '+'}</Text></Pressable>; })}</Panel>
+    </View>
+  </View></CoachShell>;
+}
+
+const styles=StyleSheet.create({columns:{flexDirection:'row',gap:24,alignItems:'flex-start'},form:{flex:1,padding:24,gap:12},library:{width:370,padding:20,gap:12},label:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:9},input:{height:48,paddingHorizontal:14,color:SetForgeColors.textPrimary,fontSize:13,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:7,backgroundColor:SetForgeColors.canvas,outlineStyle:'none'} as never,textarea:{minHeight:96,padding:14,color:SetForgeColors.textPrimary,fontSize:13,textAlignVertical:'top',borderWidth:1,borderColor:SetForgeColors.border,borderRadius:7,backgroundColor:SetForgeColors.canvas,outlineStyle:'none'} as never,line:{height:1,marginVertical:8,backgroundColor:SetForgeColors.border},header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},selectedRow:{minHeight:76,paddingVertical:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderTopWidth:1,borderTopColor:SetForgeColors.border},order:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:9},exerciseName:{color:SetForgeColors.textPrimary,fontSize:13,fontWeight:'800'},muted:{marginTop:4,color:SetForgeColors.textSecondary,fontSize:10,lineHeight:15},remove:{color:'#FF8A98',fontFamily:'monospace',fontSize:9},empty:{paddingVertical:24,color:SetForgeColors.textSecondary,fontSize:12},libraryRow:{minHeight:58,padding:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderWidth:1,borderColor:SetForgeColors.border,borderRadius:7},libraryRowActive:{borderColor:SetForgeColors.accent,backgroundColor:SetForgeColors.accentTint},pressed:{opacity:.72},add:{color:SetForgeColors.accent,fontSize:20},error:{padding:18,borderColor:'#FF4C61'},errorText:{color:'#FF8A98',fontSize:12}});

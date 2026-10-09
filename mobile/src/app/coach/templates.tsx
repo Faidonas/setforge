@@ -4,21 +4,19 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { ActionButton, CoachShell, PageHeading, Panel, StatusBadge, coachStyles } from '@/features/coach/coach-ui';
-
-const templates = [
-  ['Strength Foundation', '8 weeks · 4 days / week', '12 clients', 'Build strength'],
-  ['Hypertrophy Block', '6 weeks · 5 days / week', '7 clients', 'Build muscle'],
-  ['Fit for Life', 'Ongoing · 3 days / week', '5 clients', 'General fitness'],
-  ['Return to Training', '4 weeks · 3 days / week', '2 clients', 'Reconditioning'],
-];
+import { useCoachResource } from '@/features/coach/use-coach-resource';
+import { getWorkoutTemplates } from '@/services/workout-template-api';
 
 export default function CoachTemplatesScreen() {
   const router = useRouter();
+  const { data, error, loading } = useCoachResource(getWorkoutTemplates);
   return <CoachShell><View style={coachStyles.page}>
-    <PageHeading title="Workout templates" subtitle="Build reusable training systems and assign them to clients." actions={<ActionButton label="Create template" onPress={() => router.push('/coach/workout-builder' as Href)} />} />
-    <View style={styles.summary}><Text style={styles.active}>12 ACTIVE TEMPLATES</Text><Text style={styles.muted}>4 DRAFTS</Text><Text style={styles.muted}>26 CLIENT ASSIGNMENTS</Text></View>
-    <View style={styles.grid}>{templates.map((template,index)=><Panel key={template[0]} style={styles.card}><View style={styles.top}><StatusBadge tone={index===3?'muted':'accent'}>{index===3?'Draft':'Active'}</StatusBadge><Text style={styles.more}>•••</Text></View><Text style={styles.title}>{template[0]}</Text><Text style={styles.meta}>{template[1]}</Text><View style={styles.divider}/><Text style={styles.goal}>{template[3]}</Text><Text style={styles.clients}>{template[2]}</Text><ActionButton label="Open template" secondary onPress={() => router.push('/coach/workout-builder' as Href)} /></Panel>)}</View>
+    <PageHeading title="Workout templates" subtitle="Reusable workouts saved to your SetForge account." actions={<ActionButton label="Create template" onPress={() => router.push('/coach/workout-builder' as Href)}/>} />
+    <Text style={styles.summary}>{data?.length ?? 0} SAVED TEMPLATES</Text>
+    {loading ? <Panel style={styles.state}><Text style={styles.muted}>Loading templates…</Text></Panel> : null}{error ? <Panel style={styles.error}><Text style={styles.errorText}>{error}</Text></Panel> : null}
+    {!loading && !error && !data?.length ? <Panel style={styles.state}><Text style={styles.muted}>No templates yet. Create your first reusable workout.</Text></Panel> : null}
+    <View style={styles.grid}>{data?.map(template => <Panel key={template.id} style={styles.card}><View style={styles.top}><StatusBadge>Saved</StatusBadge><Text style={styles.position}>#{template.position ?? 0}</Text></View><Text style={styles.title}>{template.name}</Text><Text style={styles.description}>{template.description || 'No description'}</Text><View style={styles.line}/><Text style={styles.meta}>{template.exercises.length} EXERCISES</Text><Text style={styles.meta}>UPDATED {new Intl.DateTimeFormat(undefined,{dateStyle:'medium'}).format(new Date(template.updatedAt))}</Text></Panel>)}</View>
   </View></CoachShell>;
 }
 
-const styles=StyleSheet.create({summary:{flexDirection:'row',gap:32},active:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:11},muted:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:11},grid:{flexDirection:'row',flexWrap:'wrap',gap:16},card:{width:'48.8%',padding:24,gap:12},top:{flexDirection:'row',justifyContent:'space-between'},more:{color:SetForgeColors.textSecondary},title:{color:SetForgeColors.textPrimary,fontSize:20,fontWeight:'800'},meta:{color:SetForgeColors.textSecondary,fontSize:12},divider:{height:1,backgroundColor:SetForgeColors.border},goal:{color:SetForgeColors.textPrimary,fontSize:12},clients:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10}});
+const styles=StyleSheet.create({summary:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:11},grid:{flexDirection:'row',flexWrap:'wrap',gap:16},card:{width:'48.8%',padding:24,gap:12},top:{flexDirection:'row',justifyContent:'space-between'},position:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},title:{color:SetForgeColors.textPrimary,fontSize:20,fontWeight:'800'},description:{minHeight:36,color:SetForgeColors.textSecondary,fontSize:12,lineHeight:18},line:{height:1,backgroundColor:SetForgeColors.border},meta:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:9},state:{padding:24,alignItems:'center'},muted:{color:SetForgeColors.textSecondary,fontSize:12},error:{padding:24,borderColor:'#FF4C61'},errorText:{color:'#FF8A98',fontSize:12}});

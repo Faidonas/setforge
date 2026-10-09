@@ -11,6 +11,7 @@ const icons = {
   clients: require('@/assets/images/coach-web/users.svg'),
   templates: require('@/assets/images/coach-web/layers.svg'),
   exercises: require('@/assets/images/coach-web/activity.svg'),
+  training: require('@/assets/images/coach-web/activity.svg'),
   settings: require('@/assets/images/coach-web/settings.svg'),
   search: require('@/assets/images/coach-web/search.svg'),
   bell: require('@/assets/images/coach-web/bell.svg'),
@@ -18,12 +19,13 @@ const icons = {
   help: require('@/assets/images/coach-web/circle-help.svg'),
 };
 
-type NavItem = { label: string; href: '/coach' | '/coach/clients' | '/coach/templates' | '/coach/exercises'; icon: keyof typeof icons; count?: string };
+type NavItem = { label: string; href: '/coach' | '/coach/clients' | '/coach/templates' | '/coach/exercises' | '/start-workout'; icon: keyof typeof icons };
 const navItems: NavItem[] = [
   { label: 'Overview', href: '/coach', icon: 'overview' },
-  { label: 'Clients', href: '/coach/clients', icon: 'clients', count: '24' },
+  { label: 'Clients', href: '/coach/clients', icon: 'clients' },
   { label: 'Templates', href: '/coach/templates', icon: 'templates' },
   { label: 'Exercises', href: '/coach/exercises', icon: 'exercises' },
+  { label: 'My training', href: '/start-workout', icon: 'training' },
 ];
 
 export function CoachShell({ children }: PropsWithChildren) {
@@ -37,7 +39,7 @@ export function CoachShell({ children }: PropsWithChildren) {
       <View style={styles.sidebar}>
         <View>
           <View style={styles.brand}><View style={styles.brandMark} /><Text style={styles.brandText}>SETFORGE</Text></View>
-          <View style={styles.workspace}><Text style={styles.workspaceName}>Alex Morgan</Text><Text style={styles.eyebrow}>COACH WORKSPACE</Text></View>
+          <View style={styles.workspace}><Text style={styles.workspaceName}>Coach workspace</Text><Text style={styles.eyebrow}>SETFORGE TRAINER</Text></View>
           <View style={styles.nav}>
             {navItems.map((item) => {
               const selected = item.href === '/coach' ? pathname === '/coach' : pathname.startsWith(item.href);
@@ -45,7 +47,6 @@ export function CoachShell({ children }: PropsWithChildren) {
                 <Pressable key={item.href} accessibilityRole="link" onPress={() => router.push(item.href as Href)} style={({ pressed }) => [styles.navItem, selected && styles.navItemSelected, pressed && styles.pressed]}>
                   <Image source={icons[item.icon]} style={styles.navIcon} contentFit="contain" />
                   <Text style={[styles.navLabel, selected && styles.navLabelSelected]}>{item.label}</Text>
-                  {item.count ? <Text style={styles.navCount}>{item.count}</Text> : null}
                 </Pressable>
               );
             })}
@@ -54,7 +55,7 @@ export function CoachShell({ children }: PropsWithChildren) {
         </View>
         <View style={styles.sidebarFooter}>
           <View style={styles.divider} />
-          <Text style={styles.eyebrow}>COACH PRO • 24 / 30 CLIENTS</Text>
+          <Text style={styles.eyebrow}>LIVE BACKEND DATA</Text>
           <View style={styles.helpRow}><Image source={icons.help} style={styles.smallIcon} contentFit="contain" /><Text style={styles.footerLink}>Help & resources</Text></View>
           <Text style={styles.eyebrow}>SETFORGE / v1.0</Text>
         </View>
@@ -65,8 +66,8 @@ export function CoachShell({ children }: PropsWithChildren) {
           <View style={styles.topActions}>
             <View style={styles.search}><Image source={icons.search} style={styles.smallIcon} contentFit="contain" /><TextInput accessibilityLabel="Search workspace" placeholder="Search workspace…" placeholderTextColor={SetForgeColors.textSecondary} style={styles.searchInput} /></View>
             <View style={styles.bellWrap}><Image source={icons.bell} style={styles.smallIcon} contentFit="contain" /><View style={styles.unread} /></View>
-            <View style={styles.avatar}><Text style={styles.avatarText}>AM</Text></View>
-            <Text style={styles.coachName}>Alex Morgan</Text>
+            <View style={styles.avatar}><Text style={styles.avatarText}>SF</Text></View>
+            <Text style={styles.coachName}>Coach</Text>
             <Image source={icons.chevronDown} style={styles.chevron} contentFit="contain" />
           </View>
         </View>
@@ -118,7 +119,6 @@ const styles = StyleSheet.create({
   navIcon: { width: 18, height: 18 },
   navLabel: { color: SetForgeColors.textSecondary, fontSize: 14 },
   navLabelSelected: { color: SetForgeColors.accent, fontWeight: '700' },
-  navCount: { color: SetForgeColors.textSecondary, fontSize: 11, fontFamily: 'monospace' },
   sidebarFooter: { gap: 16, padding: 8 },
   divider: { height: 1, backgroundColor: SetForgeColors.border },
   helpRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

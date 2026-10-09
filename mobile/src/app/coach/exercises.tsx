@@ -1,21 +1,23 @@
-import { Image } from 'expo-image';
-import type { Href } from 'expo-router';
-import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
-import { ActionButton, CoachShell, PageHeading, Panel, StatusBadge, coachStyles } from '@/features/coach/coach-ui';
+import { CoachShell, PageHeading, Panel, StatusBadge, coachStyles } from '@/features/coach/coach-ui';
+import { useCoachResource } from '@/features/coach/use-coach-resource';
+import { getExercises } from '@/services/exercise-api';
 
-const searchIcon=require('@/assets/images/coach-web/search.svg');
-const exercises=[['Bench Press','Chest','Barbell','Compound'],['Back Squat','Quadriceps','Barbell','Compound'],['Romanian Deadlift','Hamstrings','Barbell','Compound'],['Lat Pulldown','Back','Cable','Compound'],['Lateral Raise','Shoulders','Dumbbell','Isolation'],['Cable Row','Back','Cable','Compound']];
-
-export default function CoachExercisesScreen(){
-  const router=useRouter();
+export default function CoachExercisesScreen() {
+  const [query, setQuery] = useState('');
+  const { data, error, loading } = useCoachResource(getExercises);
+  const exercises = useMemo(() => (data ?? []).filter(exercise => `${exercise.name} ${exercise.primaryMuscle} ${exercise.equipment}`.toLowerCase().includes(query.trim().toLowerCase())), [data, query]);
   return <CoachShell><View style={coachStyles.page}>
-    <PageHeading title="Exercise library" subtitle="Manage the movements used across your coaching programs." actions={<ActionButton label="Add exercise" onPress={()=>router.push('/coach/exercise-editor' as Href)}/>}/>
-    <View style={styles.filters}><View style={styles.search}><Image source={searchIcon} style={styles.icon}/><TextInput accessibilityLabel="Search exercises" placeholder="Search exercises…" placeholderTextColor={SetForgeColors.textSecondary} style={styles.input}/></View>{['All muscles ⌄','All equipment ⌄','All types ⌄'].map(x=><View key={x} style={styles.chip}><Text style={styles.chipText}>{x}</Text></View>)}</View>
-    <Panel style={styles.table}><View style={styles.header}><Text style={[styles.head,styles.name]}>EXERCISE</Text><Text style={[styles.head,styles.col]}>PRIMARY MUSCLE</Text><Text style={[styles.head,styles.col]}>EQUIPMENT</Text><Text style={[styles.head,styles.col]}>TYPE</Text><Text style={styles.head}>STATUS</Text></View>{exercises.map(x=><View key={x[0]} style={styles.row}><View style={[styles.name,styles.exercise]}><View style={styles.thumb}/><Text onPress={()=>router.push('/coach/exercise-editor' as Href)} style={styles.exerciseName}>{x[0]}</Text></View><Text style={[styles.cell,styles.col]}>{x[1]}</Text><Text style={[styles.cell,styles.col]}>{x[2]}</Text><Text style={[styles.cell,styles.col]}>{x[3]}</Text><StatusBadge>Active</StatusBadge></View>)}</Panel>
+    <PageHeading title="Exercise library" subtitle="The live exercise catalogue used by workout templates." />
+    <TextInput accessibilityLabel="Search exercises" onChangeText={setQuery} placeholder="Search exercises, muscles, or equipment…" placeholderTextColor={SetForgeColors.textSecondary} style={styles.search} value={query}/>
+    <Panel style={styles.table}><View style={styles.header}><Text style={[styles.head,styles.name]}>EXERCISE</Text><Text style={[styles.head,styles.col]}>PRIMARY MUSCLE</Text><Text style={[styles.head,styles.col]}>EQUIPMENT</Text><Text style={[styles.head,styles.col]}>TRACKING</Text><Text style={styles.head}>STATUS</Text></View>
+      {loading ? <Text style={styles.state}>Loading exercises…</Text> : null}{error ? <Text style={styles.error}>{error}</Text> : null}{!loading && !error && !exercises.length ? <Text style={styles.state}>No exercises match your search.</Text> : null}
+      {exercises.map(exercise => <View key={exercise.id} style={styles.row}><View style={[styles.name,styles.exercise]}><View style={styles.thumb}/><Text style={styles.exerciseName}>{exercise.name}</Text></View><Text style={[styles.cell,styles.col]}>{exercise.primaryMuscle}</Text><Text style={[styles.cell,styles.col]}>{exercise.equipment}</Text><Text style={[styles.cell,styles.col]}>{exercise.exerciseType === 'TIMED' ? 'Timed' : 'Weight & reps'}</Text><StatusBadge>Visible</StatusBadge></View>)}
+    </Panel>
   </View></CoachShell>;
 }
 
-const styles=StyleSheet.create({filters:{flexDirection:'row',alignItems:'center',gap:16},search:{width:360,height:48,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:8,backgroundColor:SetForgeColors.surface},icon:{width:18,height:18},input:{flex:1,color:SetForgeColors.textPrimary,outlineStyle:'none'} as never,chip:{paddingHorizontal:16,paddingVertical:8,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:999,backgroundColor:SetForgeColors.surface},chipText:{color:SetForgeColors.textSecondary,fontSize:12},table:{overflow:'hidden'},header:{height:48,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16},head:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},name:{width:310},col:{width:190},row:{height:72,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16,borderTopWidth:1,borderTopColor:SetForgeColors.border},exercise:{flexDirection:'row',alignItems:'center',gap:12},thumb:{width:42,height:42,borderRadius:6,backgroundColor:SetForgeColors.surfaceMuted,borderWidth:1,borderColor:SetForgeColors.border},exerciseName:{color:SetForgeColors.textPrimary,fontSize:13,fontWeight:'700'},cell:{color:SetForgeColors.textSecondary,fontSize:12}});
+const styles=StyleSheet.create({search:{width:440,height:48,paddingHorizontal:16,color:SetForgeColors.textPrimary,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:8,backgroundColor:SetForgeColors.surface,outlineStyle:'none'} as never,table:{overflow:'hidden'},header:{height:48,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16},head:{color:SetForgeColors.textSecondary,fontFamily:'monospace',fontSize:10},name:{width:310},col:{width:190},row:{minHeight:72,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:16,borderTopWidth:1,borderTopColor:SetForgeColors.border},exercise:{flexDirection:'row',alignItems:'center',gap:12},thumb:{width:42,height:42,borderRadius:6,backgroundColor:SetForgeColors.surfaceMuted,borderWidth:1,borderColor:SetForgeColors.border},exerciseName:{color:SetForgeColors.textPrimary,fontSize:13,fontWeight:'700'},cell:{color:SetForgeColors.textSecondary,fontSize:12},state:{padding:24,color:SetForgeColors.textSecondary,fontSize:12},error:{padding:24,color:'#FF8A98',fontSize:12}});
