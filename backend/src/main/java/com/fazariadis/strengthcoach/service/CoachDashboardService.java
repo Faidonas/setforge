@@ -12,7 +12,6 @@ import com.fazariadis.strengthcoach.entity.WorkoutSet;
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
 import com.fazariadis.strengthcoach.entity.enums.CoachingStatus;
 import com.fazariadis.strengthcoach.entity.enums.WorkoutSessionStatus;
-import com.fazariadis.strengthcoach.exception.ForbiddenOperationException;
 import com.fazariadis.strengthcoach.exception.ResourceNotFoundException;
 import com.fazariadis.strengthcoach.repository.CoachingRelationshipRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSessionExerciseRepository;
@@ -25,11 +24,13 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class CoachDashboardService {
 
 	private static final Duration REPORTING_WINDOW = Duration.ofDays(28);
@@ -40,10 +41,13 @@ public class CoachDashboardService {
 	private final WorkoutTemplateRepository workoutTemplateRepository;
 	private final WorkoutSessionExerciseRepository sessionExerciseRepository;
 	private final WorkoutSetRepository workoutSetRepository;
+	private final CoachAccessPolicy coachAccessPolicy;
 
 	@Transactional(readOnly = true)
 	public CoachDashboardResponse getDashboard(User coach) {
 		requireCoach(coach);
+		long startedAt = System.nanoTime();
+		log.info("area=coach-dashboard action=get-dashboard event=start coachUserId={}", coach.getId());
 		Instant now = Instant.now();
 		List<ClientData> clients = loadActiveClients(coach, now);
 		List<CoachClientSummaryResponse> attention = clients.stream()
@@ -59,9 +63,10 @@ public class CoachDashboardService {
 				.limit(6)
 				.toList();
 
-		return CoachDashboardResponse.builder()
+		CoachDashboardResponse response = CoachDashboardResponse.builder()
 				.coachId(coach.getId())
 				.coachName(coach.getDisplayName())
+				.admin(coach.getAccountType() == AccountType.ADMIN)
 				.activeClientCount(clients.size())
 				.templateCount(workoutTemplateRepository.countByOwner_Id(coach.getId()))
 				.completedWorkoutsLast28Days(clients.stream()
@@ -70,27 +75,43 @@ public class CoachDashboardService {
 				.attentionClients(attention)
 				.recentWorkouts(recent)
 				.build();
+		log.info("area=coach-dashboard action=get-dashboard event=success coachUserId={} activeClients={} recentWorkouts={} durationMs={}",
+				coach.getId(), response.getActiveClientCount(), response.getRecentWorkouts().size(), elapsedMillis(startedAt));
+		return response;
 	}
 
 	@Transactional(readOnly = true)
 	public List<CoachClientSummaryResponse> getClients(User coach) {
 		requireCoach(coach);
-		return loadActiveClients(coach, Instant.now()).stream().map(ClientData::summary).toList();
+		long startedAt = System.nanoTime();
+		log.info("area=coach-dashboard action=get-clients event=start coachUserId={}", coach.getId());
+		List<CoachClientSummaryResponse> clients = loadActiveClients(coach, Instant.now()).stream()
+				.map(ClientData::summary).toList();
+		log.info("area=coach-dashboard action=get-clients event=success coachUserId={} clientCount={} durationMs={}",
+				coach.getId(), clients.size(), elapsedMillis(startedAt));
+		return clients;
 	}
 
 	@Transactional(readOnly = true)
 	public CoachClientDetailResponse getClient(User coach, Long clientId) {
 		requireCoach(coach);
+		long startedAt = System.nanoTime();
+		log.info("area=coach-dashboard action=get-client event=start coachUserId={} clientUserId={}",
+				coach.getId(), clientId);
 		CoachingRelationship relationship = relationshipRepository
 				.findAllByTrainer_IdAndStatusOrderByCreatedAtDesc(coach.getId(), CoachingStatus.ACTIVE)
 				.stream()
 				.filter(candidate -> candidate.getClient().getId().equals(clientId))
 				.findFirst()
-				.orElseThrow(() -> new ResourceNotFoundException("Active client " + clientId + " was not found"));
+				.orElseThrow(() -> {
+					log.warn("area=coach-dashboard action=get-client event=not-found coachUserId={} clientUserId={}",
+							coach.getId(), clientId);
+					return new ResourceNotFoundException("Active client " + clientId + " was not found");
+				});
 		Instant cutoff = Instant.now().minus(REPORTING_WINDOW);
 		List<WorkoutSession> sessions = completedSessions(clientId);
 		List<WorkoutSession> inWindow = sessions.stream().filter(session -> completedAfter(session, cutoff)).toList();
-		return CoachClientDetailResponse.builder()
+		CoachClientDetailResponse response = CoachClientDetailResponse.builder()
 				.id(relationship.getClient().getId())
 				.displayName(relationship.getClient().getDisplayName())
 				.email(relationship.getClient().getEmail())
@@ -103,6 +124,13 @@ public class CoachDashboardService {
 				.recentWorkouts(sessions.stream().limit(8)
 						.map(session -> toWorkoutSummary(session, relationship.getClient())).toList())
 				.build();
+		log.info("area=coach-dashboard action=get-client event=success coachUserId={} clientUserId={} recentWorkoutCount={} durationMs={}",
+				coach.getId(), clientId, response.getRecentWorkouts().size(), elapsedMillis(startedAt));
+		return response;
+	}
+
+	private long elapsedMillis(long startedAt) {
+		return (System.nanoTime() - startedAt) / 1_000_000;
 	}
 
 	private List<ClientData> loadActiveClients(User coach, Instant now) {
@@ -169,9 +197,7 @@ public class CoachDashboardService {
 	}
 
 	private void requireCoach(User user) {
-		if (user.getAccountType() != AccountType.PERSONAL_TRAINER) {
-			throw new ForbiddenOperationException("A personal trainer account is required");
-		}
+		coachAccessPolicy.requireAccess(user);
 	}
 
 	private record ClientData(

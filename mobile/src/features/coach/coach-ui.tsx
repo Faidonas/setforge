@@ -2,9 +2,11 @@ import { Image } from 'expo-image';
 import { usePathname, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import type { PropsWithChildren, ReactNode } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
+import { useAuth } from '@/features/auth/auth-context';
 
 const icons = {
   overview: require('@/assets/images/coach-web/layout-dashboard.svg'),
@@ -15,7 +17,6 @@ const icons = {
   settings: require('@/assets/images/coach-web/settings.svg'),
   search: require('@/assets/images/coach-web/search.svg'),
   bell: require('@/assets/images/coach-web/bell.svg'),
-  chevronDown: require('@/assets/images/coach-web/chevron-down.svg'),
   help: require('@/assets/images/coach-web/circle-help.svg'),
 };
 
@@ -31,8 +32,23 @@ const navItems: NavItem[] = [
 export function CoachShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const crumbs = pathname.split('/').filter(Boolean).slice(1);
   const current = crumbs.length ? crumbs.map((part) => part.replace(/-/g, ' ')).join(' / ') : 'Command center';
+
+  async function signOut() {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    setSignOutError(null);
+    try {
+      await auth.signOut();
+    } catch (error) {
+      setSignOutError(error instanceof Error ? error.message : 'Could not sign out.');
+      setIsSigningOut(false);
+    }
+  }
 
   return (
     <View style={styles.shell}>
@@ -68,7 +84,10 @@ export function CoachShell({ children }: PropsWithChildren) {
             <View style={styles.bellWrap}><Image source={icons.bell} style={styles.smallIcon} contentFit="contain" /><View style={styles.unread} /></View>
             <View style={styles.avatar}><Text style={styles.avatarText}>SF</Text></View>
             <Text style={styles.coachName}>Coach</Text>
-            <Image source={icons.chevronDown} style={styles.chevron} contentFit="contain" />
+            <Pressable accessibilityRole="button" disabled={isSigningOut} onPress={() => void signOut()} style={({ pressed }) => [styles.signOutButton, (pressed || isSigningOut) && styles.pressed]}>
+              <Text style={styles.signOutLabel}>{isSigningOut ? 'SIGNING OUT…' : 'SIGN OUT'}</Text>
+            </Pressable>
+            {signOutError ? <Text numberOfLines={1} style={styles.signOutError}>{signOutError}</Text> : null}
           </View>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent} style={styles.contentScroll}>{children}</ScrollView>
@@ -138,7 +157,9 @@ const styles = StyleSheet.create({
   avatar: { width: 32, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: SetForgeColors.border, backgroundColor: SetForgeColors.surface },
   avatarText: { color: SetForgeColors.textPrimary, fontSize: 11, fontFamily: 'monospace' },
   coachName: { color: SetForgeColors.textPrimary, fontSize: 12, fontWeight: '700' },
-  chevron: { width: 14, height: 14 },
+  signOutButton: { height: 34, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: SetForgeColors.border, borderRadius: 6 },
+  signOutLabel: { color: SetForgeColors.textSecondary, fontFamily: 'monospace', fontSize: 9, fontWeight: '800' },
+  signOutError: { maxWidth: 180, color: '#FF8A98', fontSize: 10 },
   contentScroll: { flex: 1 },
   scrollContent: { minWidth: 980 },
   pageHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

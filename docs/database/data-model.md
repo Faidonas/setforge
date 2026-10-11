@@ -35,6 +35,7 @@ erDiagram
         varchar email UK
         varchar display_name
         varchar account_type
+        boolean onboarding_completed
         timestamptz created_at
         timestamptz updated_at
     }
@@ -145,8 +146,9 @@ Database table: `users`
 A user is an account that can use SetForge. Both account types use the same table so shared
 features, such as owning a workout template or logging a workout, do not require duplicate models.
 
-`account_type` currently supports:
+`account_type` supports:
 
+- `ADMIN`: application owner with access to both the training and coaching workspaces.
 - `PERSONAL_TRAINER`
 - `INDIVIDUAL`
 
@@ -182,7 +184,7 @@ Rules:
 - The same trainer-client pair can have only one `PENDING` or `ACTIVE` relationship at a time.
 - Different trainers can have active relationships with the same client.
 - When both dates exist, `ended_at` cannot be earlier than `started_at`.
-- Role validation, such as requiring the trainer to have account type `PERSONAL_TRAINER`, belongs
+- Role validation, such as requiring the trainer to have account type `ADMIN` or `PERSONAL_TRAINER`, belongs
   in the service layer because a row-level check cannot inspect another table safely.
 
 ### Exercise

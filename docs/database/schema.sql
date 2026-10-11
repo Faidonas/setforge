@@ -27,10 +27,11 @@ CREATE TABLE IF NOT EXISTS users
     email        VARCHAR(255) NOT NULL UNIQUE,
     display_name VARCHAR(100) NOT NULL,
     account_type VARCHAR(30)  NOT NULL,
+    onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT ck_users_account_type
-        CHECK (account_type IN ('PERSONAL_TRAINER', 'INDIVIDUAL'))
+        CHECK (account_type IN ('ADMIN', 'PERSONAL_TRAINER', 'INDIVIDUAL'))
 );
 
 CREATE TABLE IF NOT EXISTS coaching_relationships

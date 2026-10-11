@@ -14,6 +14,7 @@ public class CoachDashboardResponse {
 
 	private Long coachId;
 	private String coachName;
+	private boolean admin;
 	private long activeClientCount;
 	private long templateCount;
 	private long completedWorkoutsLast28Days;

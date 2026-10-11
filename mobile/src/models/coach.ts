@@ -28,6 +28,7 @@ export type CoachClientDetail = Omit<CoachClientSummary, 'lastWorkoutName'> & {
 export type CoachDashboard = {
   coachId: number;
   coachName: string;
+  admin: boolean;
   activeClientCount: number;
   templateCount: number;
   completedWorkoutsLast28Days: number;

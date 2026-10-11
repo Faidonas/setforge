@@ -27,6 +27,9 @@ public class UserResponse {
 	@Schema(description = "User role", example = "PERSONAL_TRAINER")
 	private AccountType accountType;
 
+	@Schema(description = "Whether the initial workspace selection has been completed")
+	private boolean onboardingCompleted;
+
 	@Schema(description = "Date the account was created")
 	private Instant createdAt;
 }

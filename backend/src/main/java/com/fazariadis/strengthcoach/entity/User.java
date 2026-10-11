@@ -46,6 +46,10 @@ public class User {
 	@Column(name = "account_type", nullable = false, length = 30)
 	private AccountType accountType;
 
+	@Builder.Default
+	@Column(name = "onboarding_completed", nullable = false)
+	private boolean onboardingCompleted = false;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;

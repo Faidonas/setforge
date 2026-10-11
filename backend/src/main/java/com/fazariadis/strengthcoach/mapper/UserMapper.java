@@ -13,6 +13,7 @@ public class UserMapper {
 				.email(user.getEmail())
 				.displayName(user.getDisplayName())
 				.accountType(user.getAccountType())
+				.onboardingCompleted(user.isOnboardingCompleted())
 				.createdAt(user.getCreatedAt())
 				.build();
 	}

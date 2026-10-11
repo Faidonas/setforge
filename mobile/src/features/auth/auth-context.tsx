@@ -18,6 +18,7 @@ type AuthContextValue = {
   signUpWithPassword(email: string, password: string): Promise<{ requiresEmailConfirmation: boolean }>;
   signInWithPassword(email: string, password: string): Promise<void>;
   signInWithGoogle(): Promise<void>;
+  changePassword(password: string): Promise<void>;
   signOut(): Promise<void>;
 };
 
@@ -100,6 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (sessionError) throw sessionError;
       }
+    },
+    async changePassword(password) {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
     },
     async signOut() {
       const { error } = await supabase.auth.signOut();

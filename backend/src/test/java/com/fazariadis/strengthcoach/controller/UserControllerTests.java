@@ -33,6 +33,7 @@ class UserControllerTests {
 				.email("alex.trainer@setforge.dev")
 				.displayName("Alex Trainer")
 				.accountType(AccountType.PERSONAL_TRAINER)
+				.onboardingCompleted(true)
 				.createdAt(Instant.parse("2026-09-01T10:00:00Z"))
 				.build());
 
@@ -41,6 +42,7 @@ class UserControllerTests {
 				.andExpect(jsonPath("$.id").value(1))
 				.andExpect(jsonPath("$.email").value("alex.trainer@setforge.dev"))
 				.andExpect(jsonPath("$.displayName").value("Alex Trainer"))
-				.andExpect(jsonPath("$.accountType").value("PERSONAL_TRAINER"));
+				.andExpect(jsonPath("$.accountType").value("PERSONAL_TRAINER"))
+				.andExpect(jsonPath("$.onboardingCompleted").value(true));
 	}
 }

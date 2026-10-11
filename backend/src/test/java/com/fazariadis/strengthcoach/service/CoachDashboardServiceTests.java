@@ -25,35 +25,43 @@ class CoachDashboardServiceTests {
 	private final WorkoutTemplateRepository workoutTemplateRepository = mock(WorkoutTemplateRepository.class);
 	private final WorkoutSessionExerciseRepository sessionExerciseRepository = mock(WorkoutSessionExerciseRepository.class);
 	private final WorkoutSetRepository workoutSetRepository = mock(WorkoutSetRepository.class);
+	private final CoachAccessPolicy coachAccessPolicy = new CoachAccessPolicy();
 	private final CoachDashboardService service = new CoachDashboardService(
 			relationshipRepository,
 			workoutSessionRepository,
 			workoutTemplateRepository,
 			sessionExerciseRepository,
-			workoutSetRepository);
+			workoutSetRepository,
+			coachAccessPolicy);
 
 	@Test
 	void dashboardReturnsStoredCoachCounts() {
-		User coach = User.builder().id(8L).displayName("Alex Trainer")
-				.accountType(AccountType.PERSONAL_TRAINER).build();
-		when(relationshipRepository.findAllByTrainer_IdAndStatusOrderByCreatedAtDesc(8L, CoachingStatus.ACTIVE))
+		User coach = User.builder().id(42L).displayName("Faidon Azariadis")
+				.accountType(AccountType.ADMIN).build();
+		when(relationshipRepository.findAllByTrainer_IdAndStatusOrderByCreatedAtDesc(42L, CoachingStatus.ACTIVE))
 				.thenReturn(List.of());
-		when(workoutTemplateRepository.countByOwner_Id(8L)).thenReturn(3L);
+		when(workoutTemplateRepository.countByOwner_Id(42L)).thenReturn(3L);
 
 		CoachDashboardResponse response = service.getDashboard(coach);
 
-		assertThat(response.getCoachName()).isEqualTo("Alex Trainer");
+		assertThat(response.getCoachName()).isEqualTo("Faidon Azariadis");
+		assertThat(response.isAdmin()).isTrue();
 		assertThat(response.getActiveClientCount()).isZero();
 		assertThat(response.getTemplateCount()).isEqualTo(3L);
 		assertThat(response.getRecentWorkouts()).isEmpty();
 	}
 
 	@Test
-	void dashboardRequiresTrainerAccount() {
+	void dashboardRejectsIndividualAccounts() {
 		User athlete = User.builder().id(9L).accountType(AccountType.INDIVIDUAL).build();
 
 		assertThatThrownBy(() -> service.getDashboard(athlete))
 				.isInstanceOf(ForbiddenOperationException.class)
-				.hasMessage("A personal trainer account is required");
+				.hasMessage("Coach dashboard access is not enabled for this account");
+	}
+
+	@Test
+	void manuallyAssignedTrainerRoleHasCoachAccess() {
+		assertThat(coachAccessPolicy.hasAccess(AccountType.PERSONAL_TRAINER)).isTrue();
 	}
 }

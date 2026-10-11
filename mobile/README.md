@@ -8,7 +8,17 @@ under Authentication providers. Add the deployed web origin and local Expo web o
 allowed redirect URLs.
 For native builds, also allow `setforge://**` as a redirect URL.
 
-The backend also needs `SUPABASE_ISSUER_URI` and `SUPABASE_JWK_SET_URI`. Run
+After login, completed trainer and administrator accounts open the coach dashboard when the
+browser viewport is at least 900 pixels wide. On smaller screens they open the training app.
+This only selects the initial workspace: privileged accounts can always switch using **My
+training** in the coach navigation or **Open coach dashboard** from the training profile.
+
+The backend also needs `SUPABASE_ISSUER_URI` and `SUPABASE_JWK_SET_URI`. To let an
+administrator create confirmed coach logins, set `SUPABASE_URL` and the project's
+server-only `SUPABASE_SERVICE_ROLE_KEY`. `SUPABASE_SECRET_KEY` is also supported, but some
+Supabase Auth deployments currently reject the new key format on user-creation requests.
+Never place that key in an `EXPO_PUBLIC_*` variable or commit it to the repository.
+Run
 `docs/database/migrations/2026-10-06-add-supabase-auth.sql` once against an existing database
 before starting the updated backend.
 

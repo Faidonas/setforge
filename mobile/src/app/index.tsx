@@ -1,34 +1,77 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors, SetForgeSpacing } from '@/constants/setforge-theme';
+import { canAccessCoachDashboard, getInitialWorkspaceRoute } from '@/constants/coach-access';
 import { RoleOptionCard } from '@/features/onboarding/components/role-option-card';
-import { updateAccountType } from '@/services/user-api';
+import { getUserProfile, updateAccountType } from '@/services/user-api';
 
 const trainMyselfIcon = require('@/assets/images/figma/user.svg');
 const personalTrainerIcon = require('@/assets/images/figma/users.svg');
 
 export default function WelcomeRoleSelectionScreen() {
   const router = useRouter();
+  const { width: viewportWidth } = useWindowDimensions();
   const [selectedRole, setSelectedRole] = useState<'athlete' | 'coach'>('athlete');
   const [saving, setSaving] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [canUseCoach, setCanUseCoach] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    let routedExistingAccount = false;
+    getUserProfile()
+      .then((profile) => {
+        if (!current) return;
+        const hasCoachAccess = canAccessCoachDashboard(profile.accountType);
+        if (profile.onboardingCompleted) {
+          routedExistingAccount = true;
+          router.replace(getInitialWorkspaceRoute(profile.accountType, viewportWidth) as Href);
+          return;
+        }
+        setCanUseCoach(hasCoachAccess);
+        setSelectedRole(hasCoachAccess ? 'coach' : 'athlete');
+      })
+      .catch((loadError: unknown) => {
+        if (current) {
+          setError(loadError instanceof Error ? loadError.message : 'Could not check account access.');
+        }
+      })
+      .finally(() => {
+        if (current && !routedExistingAccount) setCheckingAccess(false);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [router, viewportWidth]);
 
   async function continueToWorkspace() {
     setSaving(true);
     setError(null);
     try {
-      await updateAccountType(selectedRole === 'coach' ? 'PERSONAL_TRAINER' : 'INDIVIDUAL');
-      router.push((selectedRole === 'coach' ? '/coach' : '/start-workout') as Href);
+      if (!canUseCoach) await updateAccountType('INDIVIDUAL');
+      router.replace((selectedRole === 'coach' ? '/coach' : '/start-workout') as Href);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save your account type.');
     } finally {
       setSaving(false);
     }
+  }
+
+  if (checkingAccess && !error) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <View style={styles.loadingScreen}>
+          <ActivityIndicator color={SetForgeColors.accent} />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -48,22 +91,26 @@ export default function WelcomeRoleSelectionScreen() {
             selected={selectedRole === 'athlete'}
             onPress={() => setSelectedRole('athlete')}
           />
-          <RoleOptionCard
-            title="Personal Trainer"
-            description="Manage clients, design templates, monitor metrics"
-            icon={<Image source={personalTrainerIcon} style={styles.icon} contentFit="contain" />}
-            selected={selectedRole === 'coach'}
-            onPress={() => setSelectedRole('coach')}
-          />
+          {canUseCoach ? (
+            <RoleOptionCard
+              title="Personal Trainer"
+              description="Manage clients, design templates, monitor metrics"
+              icon={<Image source={personalTrainerIcon} style={styles.icon} contentFit="contain" />}
+              selected={selectedRole === 'coach'}
+              onPress={() => setSelectedRole('coach')}
+            />
+          ) : null}
         </View>
 
         <View style={styles.footer}>
           <Pressable
             accessibilityRole="button"
-            disabled={saving}
+            disabled={saving || checkingAccess}
             onPress={() => void continueToWorkspace()}
             style={({ pressed }) => [styles.continueButton, (pressed || saving) && styles.continueDisabled]}>
-            <Text style={styles.continueLabel}>{saving ? 'SAVING…' : 'CONTINUE'}</Text>
+            <Text style={styles.continueLabel}>
+              {checkingAccess ? 'CHECKING ACCESS…' : saving ? 'SAVING…' : 'CONTINUE'}
+            </Text>
           </Pressable>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Text style={styles.footnote}>You can change this later in Settings.</Text>
@@ -84,6 +131,11 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     alignSelf: 'center',
     justifyContent: 'space-between',
+  },
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandArea: {
     alignItems: 'center',

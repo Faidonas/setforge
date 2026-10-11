@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
+import { canAccessCoachDashboard } from '@/constants/coach-access';
 import { useAuth } from '@/features/auth/auth-context';
 import type { UserProfile } from '@/models/user';
 import { getUserProfile } from '@/services/user-api';
@@ -57,6 +59,10 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function signOut() {
@@ -67,6 +73,29 @@ export default function ProfileScreen() {
     } catch (signOutError) {
       setError(signOutError instanceof Error ? signOutError.message : 'Could not sign out.');
       setIsSigningOut(false);
+    }
+  }
+
+  async function changePassword() {
+    setPasswordMessage(null);
+    if (newPassword.length < 8) {
+      setPasswordMessage('Use at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('The passwords do not match.');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await auth.changePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordMessage('Password updated successfully.');
+    } catch (passwordError) {
+      setPasswordMessage(passwordError instanceof Error ? passwordError.message : 'Could not update password.');
+    } finally {
+      setIsChangingPassword(false);
     }
   }
 
@@ -156,7 +185,7 @@ export default function ProfileScreen() {
                   {profile.user.email}
                 </Text>
                 <View style={styles.roleBadge}>
-                  <Text style={styles.roleLabel}>{formatAccountType(profile.user.accountType)}</Text>
+                  <Text style={styles.roleLabel}>{formatAccountType(profile.user)}</Text>
                 </View>
               </View>
             </View>
@@ -172,7 +201,7 @@ export default function ProfileScreen() {
             <ProfileSection title="ACCOUNT">
               <ProfileRow label="Email" value={profile.user.email} />
               <View style={styles.rowDivider} />
-              <ProfileRow label="Access" value={formatAccountType(profile.user.accountType)} />
+              <ProfileRow label="Access" value={formatAccountType(profile.user)} />
               <View style={styles.rowDivider} />
               <ProfileRow label="Member since" value={formatMemberSince(profile.user.createdAt)} />
             </ProfileSection>
@@ -183,7 +212,48 @@ export default function ProfileScreen() {
               <ProfileRow label="Saved workouts" value={profile.workoutCount.toString()} />
             </ProfileSection>
 
-            {profile.user.accountType === 'PERSONAL_TRAINER' ? (
+            <View>
+              <Text style={styles.sectionTitle}>SECURITY</Text>
+              <View style={styles.securityCard}>
+                <Text style={styles.securityTitle}>Change password</Text>
+                <Text style={styles.securityHint}>Use at least 8 characters.</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={72}
+                  onChangeText={setNewPassword}
+                  placeholder="New password"
+                  placeholderTextColor={SetForgeColors.textDisabled}
+                  secureTextEntry
+                  style={styles.passwordInput}
+                  value={newPassword}
+                />
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={72}
+                  onChangeText={setConfirmPassword}
+                  onSubmitEditing={() => void changePassword()}
+                  placeholder="Confirm new password"
+                  placeholderTextColor={SetForgeColors.textDisabled}
+                  secureTextEntry
+                  style={styles.passwordInput}
+                  value={confirmPassword}
+                />
+                {passwordMessage ? <Text style={styles.passwordMessage}>{passwordMessage}</Text> : null}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isChangingPassword}
+                  onPress={() => void changePassword()}
+                  style={({ pressed }) => [styles.passwordButton, (pressed || isChangingPassword) && styles.pressed]}>
+                  <Text style={styles.passwordButtonLabel}>
+                    {isChangingPassword ? 'UPDATING…' : 'UPDATE PASSWORD'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {canAccessCoachDashboard(profile.user.accountType) ? (
               <View style={styles.trainerCard}>
                 <View style={styles.trainerCardHeader}>
                   <Text style={styles.trainerTitle}>Coach workspace</Text>
@@ -270,8 +340,9 @@ function getInitials(displayName: string) {
   return initials || 'SF';
 }
 
-function formatAccountType(accountType: UserProfile['accountType']) {
-  return accountType === 'PERSONAL_TRAINER' ? 'Athlete + Coach' : 'Athlete';
+function formatAccountType(user: UserProfile) {
+  if (user.accountType === 'ADMIN') return 'Admin · Athlete + Coach';
+  return canAccessCoachDashboard(user.accountType) ? 'Athlete + Coach' : 'Athlete';
 }
 
 function formatMemberSince(createdAt: string) {
@@ -350,6 +421,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: SetForgeColors.surface,
   },
+  securityCard: { padding: 15, gap: 10, borderWidth: 1, borderColor: SetForgeColors.border, borderRadius: 10, backgroundColor: SetForgeColors.surface },
+  securityTitle: { color: SetForgeColors.textPrimary, fontSize: 14, fontWeight: '700' },
+  securityHint: { color: SetForgeColors.textSecondary, fontSize: 11 },
+  passwordInput: { height: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: SetForgeColors.border, borderRadius: 6, color: SetForgeColors.textPrimary, backgroundColor: SetForgeColors.surfaceMuted, fontSize: 13 },
+  passwordMessage: { color: SetForgeColors.textSecondary, fontSize: 11, lineHeight: 16 },
+  passwordButton: { height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: SetForgeColors.accent },
+  passwordButtonLabel: { color: SetForgeColors.canvas, fontSize: 11, fontWeight: '900' },
   profileRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 15 },
   rowLabel: { color: SetForgeColors.textPrimary, fontSize: 13, fontWeight: '600' },
   rowValue: { flex: 1, color: SetForgeColors.textSecondary, fontSize: 12, textAlign: 'right' },
