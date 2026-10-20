@@ -7,9 +7,10 @@ import {
   SectionList,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors, SetForgeSpacing } from '@/constants/setforge-theme';
@@ -86,7 +87,7 @@ export default function ExerciseLibraryScreen() {
 
         <View style={styles.searchContainer}>
           <Text style={styles.searchIcon}>⌕</Text>
-          <TextInput
+          <NonCredentialTextInput
             accessibilityLabel="Search exercises"
             autoCapitalize="none"
             autoCorrect={false}

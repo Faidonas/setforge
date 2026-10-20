@@ -1,14 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { SetForgeColors } from '@/constants/setforge-theme';
-import { ActionButton, CoachShell, PageHeading, Panel, coachStyles } from '@/features/coach/coach-ui';
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
+
+import { CoachColors } from '@/constants/setforge-theme';
+import { ActionButton, PageHeading, Panel, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
 import type { UserProfile } from '@/models/user';
 import { createCoachUser } from '@/services/coach-api';
 
 export default function CreateCoachScreen() {
   const router = useRouter();
+  const { isCompact } = useCoachLayout();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [temporaryPassword, setTemporaryPassword] = useState('');
@@ -53,27 +56,26 @@ export default function CreateCoachScreen() {
   }
 
   return (
-    <CoachShell>
-      <View style={coachStyles.page}>
+    <View style={[coachStyles.page, isCompact && coachStyles.pageCompact]}>
         <PageHeading
           title="Create coach"
           subtitle="Prepare a trainer account or promote an existing SetForge user."
           actions={<ActionButton label="Back to dashboard" secondary onPress={() => router.back()} />}
         />
-        <View style={styles.columns}>
-          <Panel style={styles.form}>
+        <View style={[styles.columns, isCompact && styles.columnsCompact]}>
+          <Panel style={[styles.form, isCompact && styles.formCompact]}>
             <Text style={styles.label}>DISPLAY NAME</Text>
-            <TextInput
+            <NonCredentialTextInput
               autoCapitalize="words"
               maxLength={100}
               onChangeText={setDisplayName}
               placeholder="Coach name"
-              placeholderTextColor={SetForgeColors.textDisabled}
+              placeholderTextColor={CoachColors.textDisabled}
               style={styles.input}
               value={displayName}
             />
             <Text style={styles.label}>EMAIL ADDRESS</Text>
-            <TextInput
+            <NonCredentialTextInput
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
@@ -81,31 +83,31 @@ export default function CreateCoachScreen() {
               onChangeText={setEmail}
               onSubmitEditing={() => void submit()}
               placeholder="coach@example.com"
-              placeholderTextColor={SetForgeColors.textDisabled}
+              placeholderTextColor={CoachColors.textDisabled}
               style={styles.input}
               value={email}
             />
             <Text style={styles.label}>TEMPORARY PASSWORD</Text>
-            <TextInput
+            <NonCredentialTextInput
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={72}
               onChangeText={setTemporaryPassword}
               placeholder="At least 8 characters"
-              placeholderTextColor={SetForgeColors.textDisabled}
+              placeholderTextColor={CoachColors.textDisabled}
               secureTextEntry
               style={styles.input}
               value={temporaryPassword}
             />
             <Text style={styles.label}>CONFIRM PASSWORD</Text>
-            <TextInput
+            <NonCredentialTextInput
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={72}
               onChangeText={setConfirmPassword}
               onSubmitEditing={() => void submit()}
               placeholder="Enter the temporary password again"
-              placeholderTextColor={SetForgeColors.textDisabled}
+              placeholderTextColor={CoachColors.textDisabled}
               secureTextEntry
               style={styles.input}
               value={confirmPassword}
@@ -113,7 +115,7 @@ export default function CreateCoachScreen() {
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <ActionButton label={submitting ? 'Creating…' : 'Create coach'} onPress={() => void submit()} />
           </Panel>
-          <View style={styles.rail}>
+          <View style={[styles.rail, isCompact && styles.railCompact]}>
             {createdCoach ? (
               <Panel style={styles.successPanel}>
                 <Text style={styles.successTitle}>Coach access enabled</Text>
@@ -140,35 +142,37 @@ export default function CreateCoachScreen() {
             )}
           </View>
         </View>
-      </View>
-    </CoachShell>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: 20 },
+  columnsCompact: { flexDirection: 'column', gap: 16 },
   form: { width: '58%', padding: 24, gap: 12 },
+  formCompact: { width: '100%', padding: 18 },
   rail: { flex: 1 },
-  label: { marginTop: 4, color: SetForgeColors.textSecondary, fontFamily: 'monospace', fontSize: 10 },
+  railCompact: { width: '100%', flex: 0 },
+  label: { marginTop: 4, color: CoachColors.textSecondary, fontFamily: 'monospace', fontSize: 10 },
   input: {
     height: 48,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: SetForgeColors.border,
+    borderColor: CoachColors.inputBorder,
     borderRadius: 6,
-    color: SetForgeColors.textPrimary,
-    backgroundColor: SetForgeColors.surfaceMuted,
+    color: CoachColors.textPrimary,
+    backgroundColor: CoachColors.surfaceMuted,
     fontSize: 14,
     outlineStyle: 'none',
   } as never,
   infoPanel: { padding: 22, gap: 12 },
-  successPanel: { padding: 22, gap: 9, borderColor: 'rgba(50,213,131,.45)' },
-  successTitle: { color: '#32D583', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-  coachName: { color: SetForgeColors.textPrimary, fontSize: 19, fontWeight: '800' },
-  muted: { color: SetForgeColors.textSecondary, fontSize: 12 },
-  passwordBox: { marginTop: 6, padding: 14, gap: 7, borderWidth: 1, borderColor: SetForgeColors.accent, borderRadius: 6, backgroundColor: SetForgeColors.accentTint },
-  passwordLabel: { color: SetForgeColors.accent, fontFamily: 'monospace', fontSize: 9, fontWeight: '800' },
-  password: { color: SetForgeColors.textPrimary, fontFamily: 'monospace', fontSize: 15, fontWeight: '700' },
-  instructions: { color: SetForgeColors.textSecondary, fontSize: 12, lineHeight: 19 },
-  error: { color: '#FF8A98', fontSize: 12, lineHeight: 18 },
+  successPanel: { padding: 22, gap: 9, borderColor: CoachColors.accentText },
+  successTitle: { color: CoachColors.accentText, fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
+  coachName: { color: CoachColors.textPrimary, fontSize: 19, fontWeight: '800' },
+  muted: { color: CoachColors.textSecondary, fontSize: 12 },
+  passwordBox: { marginTop: 6, padding: 14, gap: 7, borderWidth: 1, borderColor: CoachColors.accentText, borderRadius: 6, backgroundColor: CoachColors.accentTint },
+  passwordLabel: { color: CoachColors.accentText, fontFamily: 'monospace', fontSize: 9, fontWeight: '800' },
+  password: { color: CoachColors.textPrimary, fontFamily: 'monospace', fontSize: 15, fontWeight: '700' },
+  instructions: { color: CoachColors.textSecondary, fontSize: 12, lineHeight: 19 },
+  error: { color: CoachColors.danger, fontSize: 12, lineHeight: 18 },
 });

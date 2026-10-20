@@ -18,7 +18,9 @@ The executable database files are:
 erDiagram
     USERS ||--o{ COACHING_RELATIONSHIPS : "acts as trainer"
     USERS ||--o{ COACHING_RELATIONSHIPS : "acts as client"
-    USERS ||--o{ WORKOUT_TEMPLATES : owns
+    USERS ||--o{ WORKOUT_TEMPLATES : creates
+    USERS ||--o{ WORKOUT_TEMPLATE_ASSIGNMENTS : receives
+    WORKOUT_TEMPLATES ||--o{ WORKOUT_TEMPLATE_ASSIGNMENTS : assigned_as
     WORKOUT_TEMPLATES ||--o{ WORKOUT_TEMPLATE_EXERCISES : contains
     EXERCISES ||--o{ WORKOUT_TEMPLATE_EXERCISES : references
     WORKOUT_TEMPLATE_EXERCISES ||--o{ WORKOUT_TEMPLATE_SETS : plans
@@ -36,6 +38,10 @@ erDiagram
         varchar display_name
         varchar account_type
         boolean onboarding_completed
+        varchar unit_system
+        varchar primary_objective
+        varchar lifting_experience
+        varchar theme_preference
         timestamptz created_at
         timestamptz updated_at
     }

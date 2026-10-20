@@ -1,9 +1,11 @@
 package com.fazariadis.strengthcoach.service;
 
 import com.fazariadis.strengthcoach.dto.CreateCoachUserResponse;
+import com.fazariadis.strengthcoach.dto.CompleteOnboardingRequest;
 import com.fazariadis.strengthcoach.dto.UserResponse;
 import com.fazariadis.strengthcoach.entity.User;
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
+import com.fazariadis.strengthcoach.entity.enums.ThemePreference;
 import com.fazariadis.strengthcoach.exception.ForbiddenOperationException;
 import com.fazariadis.strengthcoach.exception.InvalidRequestException;
 import com.fazariadis.strengthcoach.exception.ResourceNotFoundException;
@@ -45,6 +47,32 @@ public class UserService {
 					}
 					user.setAccountType(accountType);
 					user.setOnboardingCompleted(true);
+					return userMapper.toResponse(userRepository.save(user));
+				})
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"User " + userId + " was not found"));
+	}
+
+	@Transactional
+	public UserResponse completeOnboarding(long userId, CompleteOnboardingRequest request) {
+		return userRepository.findById(userId)
+				.map(user -> {
+					user.setDisplayName(request.getDisplayName().trim());
+					user.setUnitSystem(request.getUnitSystem());
+					user.setPrimaryObjective(request.getPrimaryObjective());
+					user.setLiftingExperience(request.getLiftingExperience());
+					user.setOnboardingCompleted(true);
+					return userMapper.toResponse(userRepository.save(user));
+				})
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"User " + userId + " was not found"));
+	}
+
+	@Transactional
+	public UserResponse updateThemePreference(long userId, ThemePreference themePreference) {
+		return userRepository.findById(userId)
+				.map(user -> {
+					user.setThemePreference(themePreference);
 					return userMapper.toResponse(userRepository.save(user));
 				})
 				.orElseThrow(() -> new ResourceNotFoundException(

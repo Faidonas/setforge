@@ -100,6 +100,6 @@ public class WorkoutTemplateController {
     @ApiResponse(responseCode = "200", description = "Workout templates returned in display order")
     @ApiResponse(responseCode = "404", description = "User was not found")
     public List<WorkoutTemplateResponse> getByOwner(@AuthenticationPrincipal Jwt jwt) {
-        return workoutTemplateService.getByOwner(authenticatedUserService.resolve(jwt).getId());
+        return workoutTemplateService.getAssignedTo(authenticatedUserService.resolve(jwt).getId());
     }
 }

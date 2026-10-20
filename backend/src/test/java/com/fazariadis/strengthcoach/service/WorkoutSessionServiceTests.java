@@ -28,6 +28,7 @@ import com.fazariadis.strengthcoach.repository.WorkoutSessionExerciseRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSessionRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSetRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateExerciseRepository;
+import com.fazariadis.strengthcoach.repository.WorkoutTemplateAssignmentRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateSetRepository;
 import java.math.BigDecimal;
@@ -44,6 +45,8 @@ class WorkoutSessionServiceTests {
 			mock(WorkoutSessionExerciseRepository.class);
 	private final WorkoutSetRepository workoutSetRepository = mock(WorkoutSetRepository.class);
 	private final WorkoutTemplateRepository templateRepository = mock(WorkoutTemplateRepository.class);
+	private final WorkoutTemplateAssignmentRepository templateAssignmentRepository =
+			mock(WorkoutTemplateAssignmentRepository.class);
 	private final WorkoutTemplateExerciseRepository templateExerciseRepository =
 			mock(WorkoutTemplateExerciseRepository.class);
 	private final WorkoutTemplateSetRepository templateSetRepository =
@@ -55,6 +58,7 @@ class WorkoutSessionServiceTests {
 			sessionExerciseRepository,
 			workoutSetRepository,
 			templateRepository,
+			templateAssignmentRepository,
 			templateExerciseRepository,
 			templateSetRepository,
 			userRepository,
@@ -136,6 +140,8 @@ class WorkoutSessionServiceTests {
 
 		when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 		when(templateRepository.findById(5L)).thenReturn(Optional.of(template));
+		when(templateAssignmentRepository.existsByWorkoutTemplate_IdAndUser_Id(5L, 1L))
+				.thenReturn(true);
 		when(sessionRepository.saveAndFlush(any(WorkoutSession.class))).thenAnswer(invocation -> {
 			WorkoutSession session = invocation.getArgument(0);
 			session.setId(40L);

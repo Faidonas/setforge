@@ -12,4 +12,5 @@ BEGIN
         ALTER TABLE users ALTER COLUMN onboarding_completed SET DEFAULT FALSE;
         ALTER TABLE users ALTER COLUMN onboarding_completed SET NOT NULL;
     END IF;
+
 END $$;

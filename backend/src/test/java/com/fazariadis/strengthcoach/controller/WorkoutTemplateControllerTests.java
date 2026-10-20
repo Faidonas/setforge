@@ -90,7 +90,7 @@ class WorkoutTemplateControllerTests {
 	@Test
 	void listsTemplatesForOwner() throws Exception {
 		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
-		when(workoutTemplateService.getByOwner(1L)).thenReturn(List.of(
+		when(workoutTemplateService.getAssignedTo(1L)).thenReturn(List.of(
 				WorkoutTemplateResponse.builder().id(12L).ownerId(1L).name("Upper Body").build()));
 
 		mockMvc.perform(get("/api/workout-templates"))

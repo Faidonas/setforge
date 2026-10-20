@@ -1,12 +1,14 @@
-import { Stack, useRouter } from 'expo-router';
+import { Slot, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { canAccessCoachDashboard } from '@/constants/coach-access';
-import { SetForgeColors } from '@/constants/setforge-theme';
+import { CoachColors } from '@/constants/setforge-theme';
+import { CoachShell } from '@/features/coach/coach-ui';
+import { CoachThemeProvider } from '@/features/coach/coach-theme';
 import { getUserProfile } from '@/services/user-api';
 
-export default function CoachLayout() {
+function ProtectedCoachLayout() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
 
@@ -30,12 +32,16 @@ export default function CoachLayout() {
   if (!authorized) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={SetForgeColors.accent} />
+        <ActivityIndicator color={CoachColors.accent} />
       </View>
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#09090B' } }} />;
+  return <CoachShell><Slot /></CoachShell>;
+}
+
+export default function CoachLayout() {
+  return <CoachThemeProvider><ProtectedCoachLayout /></CoachThemeProvider>;
 }
 
 const styles = StyleSheet.create({
@@ -43,6 +49,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: SetForgeColors.canvas,
+    backgroundColor: CoachColors.canvas,
   },
 });

@@ -8,9 +8,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RestTimerControl, formatRestTime } from '@/components/rest-timer-control';
@@ -248,7 +249,7 @@ function ExpandedExercise({
         </Pressable>
       </View>
 
-      <TextInput
+      <NonCredentialTextInput
         accessibilityLabel={`Notes for ${draftExercise.exercise.name}`}
         maxLength={500}
         onChangeText={(notes) => updateExerciseNotes(draftExercise.clientId, notes)}
@@ -401,7 +402,7 @@ function SetInput({
 }) {
   return (
     <View style={styles.metricColumn}>
-      <TextInput
+      <NonCredentialTextInput
         accessibilityLabel={accessibilityLabel}
         keyboardType="decimal-pad"
         maxLength={7}

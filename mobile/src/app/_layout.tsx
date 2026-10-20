@@ -7,6 +7,7 @@ import { SetForgeColors } from '@/constants/setforge-theme';
 import { ActiveWorkoutProvider } from '@/features/workouts/active-workout/active-workout-context';
 import { ActiveWorkoutSheet } from '@/features/workouts/active-workout/active-workout-sheet';
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
+import '@/global.css';
 
 const setForgeNavigationTheme = {
   ...DarkTheme,
@@ -44,6 +45,7 @@ function AuthenticatedApp() {
           <Stack.Protected guard={!session}><Stack.Screen name="sign-in" /></Stack.Protected>
           <Stack.Protected guard={Boolean(session)}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="initial-setup" />
             <Stack.Screen name="(main)" />
             <Stack.Screen name="active-workout" />
             <Stack.Screen name="create-template" />

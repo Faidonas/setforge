@@ -12,7 +12,7 @@ const moreIcon = require('@/assets/images/figma/more-horizontal.svg');
 type WorkoutTemplateCardProps = {
   template: WorkoutTemplate;
   onPress: () => void;
-  onMorePress: (anchor: MenuAnchor) => void;
+  onMorePress?: (anchor: MenuAnchor) => void;
 };
 
 function formatUpdatedAt(updatedAt: string) {
@@ -77,7 +77,7 @@ export function WorkoutTemplateCard({ template, onPress, onMorePress }: WorkoutT
           <Text numberOfLines={1} style={styles.updatedText}>{formatUpdatedAt(template.updatedAt)}</Text>
         </View>
       </Pressable>
-      <View collapsable={false} ref={moreButtonRef} style={styles.moreButtonAnchor}>
+      {onMorePress ? <View collapsable={false} ref={moreButtonRef} style={styles.moreButtonAnchor}>
         <Pressable
           accessibilityLabel={`More options for ${template.name}`}
           accessibilityRole="button"
@@ -100,7 +100,7 @@ export function WorkoutTemplateCard({ template, onPress, onMorePress }: WorkoutT
           style={styles.moreButton}>
           <Image source={moreIcon} style={styles.moreIcon} contentFit="contain" />
         </Pressable>
-      </View>
+      </View> : null}
     </View>
   );
 }

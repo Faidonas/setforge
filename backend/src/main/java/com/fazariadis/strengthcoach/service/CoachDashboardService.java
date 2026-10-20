@@ -4,11 +4,16 @@ import com.fazariadis.strengthcoach.dto.CoachClientDetailResponse;
 import com.fazariadis.strengthcoach.dto.CoachClientSummaryResponse;
 import com.fazariadis.strengthcoach.dto.CoachDashboardResponse;
 import com.fazariadis.strengthcoach.dto.CoachWorkoutSummaryResponse;
+import com.fazariadis.strengthcoach.dto.CoachTemplateAssigneeResponse;
+import com.fazariadis.strengthcoach.dto.CoachWorkoutTemplateResponse;
+import com.fazariadis.strengthcoach.dto.CreateWorkoutTemplateRequest;
+import com.fazariadis.strengthcoach.dto.WorkoutTemplateResponse;
 import com.fazariadis.strengthcoach.entity.CoachingRelationship;
 import com.fazariadis.strengthcoach.entity.User;
 import com.fazariadis.strengthcoach.entity.WorkoutSession;
 import com.fazariadis.strengthcoach.entity.WorkoutSessionExercise;
 import com.fazariadis.strengthcoach.entity.WorkoutSet;
+import com.fazariadis.strengthcoach.entity.WorkoutTemplateAssignment;
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
 import com.fazariadis.strengthcoach.entity.enums.CoachingStatus;
 import com.fazariadis.strengthcoach.entity.enums.WorkoutSessionStatus;
@@ -42,6 +47,7 @@ public class CoachDashboardService {
 	private final WorkoutSessionExerciseRepository sessionExerciseRepository;
 	private final WorkoutSetRepository workoutSetRepository;
 	private final CoachAccessPolicy coachAccessPolicy;
+	private final WorkoutTemplateService workoutTemplateService;
 
 	@Transactional(readOnly = true)
 	public CoachDashboardResponse getDashboard(User coach) {
@@ -127,6 +133,58 @@ public class CoachDashboardService {
 		log.info("area=coach-dashboard action=get-client event=success coachUserId={} clientUserId={} recentWorkoutCount={} durationMs={}",
 				coach.getId(), clientId, response.getRecentWorkouts().size(), elapsedMillis(startedAt));
 		return response;
+	}
+
+	@Transactional(readOnly = true)
+	public List<CoachWorkoutTemplateResponse> getTemplates(User coach) {
+		requireCoach(coach);
+		return workoutTemplateService.getByOwner(coach.getId()).stream()
+				.map(template -> CoachWorkoutTemplateResponse.builder()
+						.template(template)
+						.assignees(workoutTemplateService
+								.getAssignments(template.getId(), coach.getId()).stream()
+								.map(this::toAssigneeResponse)
+								.toList())
+						.build())
+				.toList();
+	}
+
+	@Transactional
+	public WorkoutTemplateResponse createTemplate(User coach, CreateWorkoutTemplateRequest request) {
+		requireCoach(coach);
+		request.setOwnerId(coach.getId());
+		return workoutTemplateService.createUnassigned(request);
+	}
+
+	@Transactional
+	public void assignTemplate(User coach, Long templateId, Long userId) {
+		requireCoach(coach);
+		requireAssignableUser(coach, userId);
+		workoutTemplateService.assign(templateId, coach.getId(), userId);
+	}
+
+	@Transactional
+	public void unassignTemplate(User coach, Long templateId, Long userId) {
+		requireCoach(coach);
+		requireAssignableUser(coach, userId);
+		workoutTemplateService.unassign(templateId, coach.getId(), userId);
+	}
+
+	private void requireAssignableUser(User coach, Long userId) {
+		if (coach.getId().equals(userId)) return;
+		if (!relationshipRepository.existsByTrainer_IdAndClient_IdAndStatusIn(
+				coach.getId(), userId, List.of(CoachingStatus.ACTIVE))) {
+			throw new ResourceNotFoundException("Active client " + userId + " was not found");
+		}
+	}
+
+	private CoachTemplateAssigneeResponse toAssigneeResponse(WorkoutTemplateAssignment assignment) {
+		return CoachTemplateAssigneeResponse.builder()
+				.userId(assignment.getUser().getId())
+				.displayName(assignment.getUser().getDisplayName())
+				.email(assignment.getUser().getEmail())
+				.assignedAt(assignment.getCreatedAt())
+				.build();
 	}
 
 	private long elapsedMillis(long startedAt) {

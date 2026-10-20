@@ -28,6 +28,9 @@ export type WorkoutTemplateExercise = {
 export type WorkoutTemplate = {
   id: number;
   ownerId: number;
+  ownerName?: string;
+  ownerEmail?: string;
+  editable?: boolean;
   name: string;
   description?: string;
   position?: number;

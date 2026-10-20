@@ -6,9 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -207,7 +208,10 @@ export default function ProfileScreen() {
             </ProfileSection>
 
             <ProfileSection title="TRAINING">
-              <ProfileRow label="Weight unit" value="Kilograms (kg)" />
+              <ProfileRow
+                label="Weight unit"
+                value={profile.user.unitSystem === 'IMPERIAL' ? 'Pounds (lb)' : 'Kilograms (kg)'}
+              />
               <View style={styles.rowDivider} />
               <ProfileRow label="Saved workouts" value={profile.workoutCount.toString()} />
             </ProfileSection>
@@ -217,7 +221,7 @@ export default function ProfileScreen() {
               <View style={styles.securityCard}>
                 <Text style={styles.securityTitle}>Change password</Text>
                 <Text style={styles.securityHint}>Use at least 8 characters.</Text>
-                <TextInput
+                <NonCredentialTextInput
                   autoCapitalize="none"
                   autoCorrect={false}
                   maxLength={72}
@@ -228,7 +232,7 @@ export default function ProfileScreen() {
                   style={styles.passwordInput}
                   value={newPassword}
                 />
-                <TextInput
+                <NonCredentialTextInput
                   autoCapitalize="none"
                   autoCorrect={false}
                   maxLength={72}

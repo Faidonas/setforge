@@ -12,10 +12,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
+
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RestTimerControl, formatRestTime } from '@/components/rest-timer-control';
@@ -535,7 +536,7 @@ function ResultInput({
 }) {
   return (
     <View style={styles.metricColumn}>
-      <TextInput
+      <NonCredentialTextInput
         accessibilityLabel={label}
         keyboardType="decimal-pad"
         maxLength={7}

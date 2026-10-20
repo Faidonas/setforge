@@ -10,5 +10,5 @@ export function getInitialWorkspaceRoute(accountType: AccountType, viewportWidth
   const hasDesktopViewport = viewportWidth >= COACH_DASHBOARD_MIN_WIDTH;
   return canAccessCoachDashboard(accountType) && hasDesktopViewport
     ? ('/coach' as const)
-    : ('/start-workout' as const);
+    : ('/home' as const);
 }

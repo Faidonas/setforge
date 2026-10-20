@@ -4,9 +4,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 
 import { AnchoredMenuModal, type MenuAnchor } from '@/components/anchored-menu-modal';
 import { SetForgeColors } from '@/constants/setforge-theme';
@@ -118,7 +119,7 @@ export function WorkoutTemplateActionsModal({
         {template && view === 'rename' && (
           <>
             <Text style={styles.dialogTitle}>Rename Template</Text>
-            <TextInput
+            <NonCredentialTextInput
               accessibilityLabel="New template name"
               autoFocus
               maxLength={100}

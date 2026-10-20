@@ -7,9 +7,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fazariadis.strengthcoach.dto.CreateCoachUserResponse;
+import com.fazariadis.strengthcoach.dto.CompleteOnboardingRequest;
 import com.fazariadis.strengthcoach.dto.UserResponse;
 import com.fazariadis.strengthcoach.entity.User;
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
+import com.fazariadis.strengthcoach.entity.enums.LiftingExperience;
+import com.fazariadis.strengthcoach.entity.enums.PrimaryObjective;
+import com.fazariadis.strengthcoach.entity.enums.ThemePreference;
+import com.fazariadis.strengthcoach.entity.enums.UnitSystem;
 import com.fazariadis.strengthcoach.exception.ForbiddenOperationException;
 import com.fazariadis.strengthcoach.exception.ResourceNotFoundException;
 import com.fazariadis.strengthcoach.mapper.UserMapper;
@@ -80,6 +85,47 @@ class UserServiceTests {
 
 		assertThat(user.isOnboardingCompleted()).isTrue();
 		assertThat(response.isOnboardingCompleted()).isTrue();
+	}
+
+	@Test
+	void profileSetupPersistsTrainingPreferences() {
+		User user = User.builder().id(9L).displayName("Old Name").accountType(AccountType.INDIVIDUAL).build();
+		when(userRepository.findById(9L)).thenReturn(Optional.of(user));
+		when(userRepository.save(user)).thenReturn(user);
+		when(userMapper.toResponse(user)).thenAnswer(invocation -> UserResponse.builder()
+				.id(user.getId())
+				.displayName(user.getDisplayName())
+				.onboardingCompleted(user.isOnboardingCompleted())
+				.unitSystem(user.getUnitSystem())
+				.primaryObjective(user.getPrimaryObjective())
+				.liftingExperience(user.getLiftingExperience())
+				.build());
+
+		UserResponse response = userService.completeOnboarding(9L, new CompleteOnboardingRequest(
+				" Alex ", UnitSystem.IMPERIAL, PrimaryObjective.HYPERTROPHY,
+				LiftingExperience.ADVANCED));
+
+		assertThat(response.getDisplayName()).isEqualTo("Alex");
+		assertThat(response.getUnitSystem()).isEqualTo(UnitSystem.IMPERIAL);
+		assertThat(response.getPrimaryObjective()).isEqualTo(PrimaryObjective.HYPERTROPHY);
+		assertThat(response.getLiftingExperience()).isEqualTo(LiftingExperience.ADVANCED);
+		assertThat(response.isOnboardingCompleted()).isTrue();
+	}
+
+	@Test
+	void themePreferenceIsPersistedForTheUser() {
+		User user = User.builder().id(9L).themePreference(ThemePreference.DARK).build();
+		when(userRepository.findById(9L)).thenReturn(Optional.of(user));
+		when(userRepository.save(user)).thenReturn(user);
+		when(userMapper.toResponse(user)).thenAnswer(invocation -> UserResponse.builder()
+				.id(user.getId())
+				.themePreference(user.getThemePreference())
+				.build());
+
+		UserResponse response = userService.updateThemePreference(9L, ThemePreference.LIGHT);
+
+		assertThat(user.getThemePreference()).isEqualTo(ThemePreference.LIGHT);
+		assertThat(response.getThemePreference()).isEqualTo(ThemePreference.LIGHT);
 	}
 
 	@Test

@@ -14,6 +14,10 @@ public class UserMapper {
 				.displayName(user.getDisplayName())
 				.accountType(user.getAccountType())
 				.onboardingCompleted(user.isOnboardingCompleted())
+				.unitSystem(user.getUnitSystem())
+				.primaryObjective(user.getPrimaryObjective())
+				.liftingExperience(user.getLiftingExperience())
+				.themePreference(user.getThemePreference())
 				.createdAt(user.getCreatedAt())
 				.build();
 	}

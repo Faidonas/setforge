@@ -12,7 +12,7 @@ export default function MainLayout() {
         <Tabs
           backBehavior="history"
           detachInactiveScreens={false}
-          initialRouteName="start-workout"
+          initialRouteName="home"
           screenOptions={{
             animation: 'fade',
             freezeOnBlur: false,
@@ -28,7 +28,9 @@ export default function MainLayout() {
                 ? 'History'
                 : routeName === 'profile'
                   ? 'Profile'
-                : 'Start';
+                  : routeName === 'start-workout'
+                    ? 'Start'
+                    : 'Home';
 
             return (
               <>
@@ -37,6 +39,7 @@ export default function MainLayout() {
               </>
             );
           }}>
+          <Tabs.Screen name="home" />
           <Tabs.Screen name="history" />
           <Tabs.Screen name="start-workout" />
           <Tabs.Screen name="exercises" />

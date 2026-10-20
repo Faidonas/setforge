@@ -17,6 +17,9 @@ public class WorkoutTemplateResponse {
 
 	private Long id;
 	private Long ownerId;
+	private String ownerName;
+	private String ownerEmail;
+	private boolean editable;
 	private String name;
 	private String description;
 	private Integer position;

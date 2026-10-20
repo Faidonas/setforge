@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fazariadis.strengthcoach.exception.InvalidRequestException;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -63,6 +65,41 @@ public class SupabaseAdminService {
 			throw new InvalidRequestException(message);
 		} catch (RestClientException exception) {
 			log.error("integration=supabase-auth operation=create-user event=transport-failure email={} durationMs={} errorType={}",
+					maskedEmail, elapsedMillis(startedAt), exception.getClass().getSimpleName(), exception);
+			throw new InvalidRequestException("Supabase Auth is currently unavailable");
+		}
+	}
+
+	public Optional<SupabaseAdminUser> findUserByEmail(String email) {
+		requireConfigured();
+		long startedAt = System.nanoTime();
+		String maskedEmail = maskEmail(email);
+		log.info("integration=supabase-auth operation=find-user event=start email={}", maskedEmail);
+		try {
+			SupabaseUserList response = restClient.get()
+					.uri(uriBuilder -> uriBuilder
+							.path("/auth/v1/admin/users")
+							.queryParam("page", 1)
+							.queryParam("per_page", 1000)
+							.build())
+					.retrieve()
+					.body(SupabaseUserList.class);
+			Optional<SupabaseAdminUser> user = response == null || response.users() == null
+					? Optional.empty()
+					: response.users().stream()
+							.filter(candidate -> candidate.email() != null
+									&& candidate.email().equalsIgnoreCase(email))
+							.findFirst();
+			log.info("integration=supabase-auth operation=find-user event=success email={} found={} durationMs={}",
+					maskedEmail, user.isPresent(), elapsedMillis(startedAt));
+			return user;
+		} catch (RestClientResponseException exception) {
+			String message = formatSupabaseError(exception);
+			log.warn("integration=supabase-auth operation=find-user event=http-failure email={} status={} durationMs={} reason={}",
+					maskedEmail, exception.getStatusCode().value(), elapsedMillis(startedAt), message);
+			throw new InvalidRequestException(message);
+		} catch (RestClientException exception) {
+			log.error("integration=supabase-auth operation=find-user event=transport-failure email={} durationMs={} errorType={}",
 					maskedEmail, elapsedMillis(startedAt), exception.getClass().getSimpleName(), exception);
 			throw new InvalidRequestException("Supabase Auth is currently unavailable");
 		}
@@ -135,6 +172,16 @@ public class SupabaseAdminService {
 			@JsonProperty("user_metadata") Map<String, Object> userMetadata) {
 	}
 
-	public record SupabaseAdminUser(String id, String email) {
+	private record SupabaseUserList(List<SupabaseAdminUser> users) {
+	}
+
+	public record SupabaseAdminUser(
+			String id,
+			String email,
+			@JsonProperty("user_metadata") Map<String, Object> userMetadata) {
+
+		public SupabaseAdminUser(String id, String email) {
+			this(id, email, Map.of());
+		}
 	}
 }

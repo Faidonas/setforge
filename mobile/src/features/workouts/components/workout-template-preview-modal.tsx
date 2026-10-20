@@ -8,7 +8,7 @@ import { getExerciseAssetUrl } from '@/services/exercise-api';
 type WorkoutTemplatePreviewModalProps = {
   template: WorkoutTemplate | null;
   onClose: () => void;
-  onEdit: (template: WorkoutTemplate) => void;
+  onEdit?: (template: WorkoutTemplate) => void;
   onStart: (template: WorkoutTemplate) => void;
   isStarting?: boolean;
 };
@@ -49,14 +49,18 @@ export function WorkoutTemplatePreviewModal({
                 <Text numberOfLines={2} style={styles.title}>
                   {template.name}
                 </Text>
-                <Pressable
-                  accessibilityLabel={`Edit ${template.name}`}
-                  accessibilityRole="button"
-                  hitSlop={10}
-                  onPress={() => onEdit(template)}
-                  style={[styles.headerSide, styles.editHeaderButton]}>
-                  <Text style={styles.editHeaderLabel}>EDIT</Text>
-                </Pressable>
+                {onEdit ? (
+                  <Pressable
+                    accessibilityLabel={`Edit ${template.name}`}
+                    accessibilityRole="button"
+                    hitSlop={10}
+                    onPress={() => onEdit(template)}
+                    style={[styles.headerSide, styles.editHeaderButton]}>
+                    <Text style={styles.editHeaderLabel}>EDIT</Text>
+                  </Pressable>
+                ) : (
+                  <View style={styles.headerSide} />
+                )}
               </View>
 
               <View style={styles.templateMeta}>

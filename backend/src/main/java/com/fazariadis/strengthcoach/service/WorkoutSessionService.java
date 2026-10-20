@@ -27,6 +27,7 @@ import com.fazariadis.strengthcoach.repository.WorkoutSessionExerciseRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSessionRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSetRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateExerciseRepository;
+import com.fazariadis.strengthcoach.repository.WorkoutTemplateAssignmentRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateSetRepository;
 
@@ -51,6 +52,7 @@ public class WorkoutSessionService {
     private final WorkoutSessionExerciseRepository workoutSessionExerciseRepository;
     private final WorkoutSetRepository workoutSetRepository;
     private final WorkoutTemplateRepository workoutTemplateRepository;
+    private final WorkoutTemplateAssignmentRepository workoutTemplateAssignmentRepository;
     private final WorkoutTemplateExerciseRepository workoutTemplateExerciseRepository;
     private final WorkoutTemplateSetRepository workoutTemplateSetRepository;
     private final UserRepository userRepository;
@@ -79,7 +81,8 @@ public class WorkoutSessionService {
                 : workoutTemplateRepository.findById(request.getTemplateId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Workout template " + request.getTemplateId() + " was not found"));
-		if (template != null && !template.getOwner().getId().equals(user.getId())) {
+		if (template != null && !workoutTemplateAssignmentRepository
+				.existsByWorkoutTemplate_IdAndUser_Id(template.getId(), user.getId())) {
 			throw new ResourceNotFoundException("Workout template " + request.getTemplateId() + " was not found");
 		}
 

@@ -20,6 +20,7 @@ export default function WelcomeRoleSelectionScreen() {
   const [saving, setSaving] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [canUseCoach, setCanUseCoach] = useState(false);
+  const [accountType, setAccountType] = useState<'ADMIN' | 'PERSONAL_TRAINER' | 'INDIVIDUAL'>('INDIVIDUAL');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function WelcomeRoleSelectionScreen() {
           return;
         }
         setCanUseCoach(hasCoachAccess);
+        setAccountType(profile.accountType);
         setSelectedRole(hasCoachAccess ? 'coach' : 'athlete');
       })
       .catch((loadError: unknown) => {
@@ -55,8 +57,12 @@ export default function WelcomeRoleSelectionScreen() {
     setSaving(true);
     setError(null);
     try {
-      if (!canUseCoach) await updateAccountType('INDIVIDUAL');
-      router.replace((selectedRole === 'coach' ? '/coach' : '/start-workout') as Href);
+      if (selectedRole === 'coach') {
+        await updateAccountType(accountType);
+        router.replace('/coach' as Href);
+      } else {
+        router.replace('/initial-setup' as Href);
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save your account type.');
     } finally {

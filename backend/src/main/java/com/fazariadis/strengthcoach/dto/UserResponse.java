@@ -1,6 +1,10 @@
 package com.fazariadis.strengthcoach.dto;
 
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
+import com.fazariadis.strengthcoach.entity.enums.LiftingExperience;
+import com.fazariadis.strengthcoach.entity.enums.PrimaryObjective;
+import com.fazariadis.strengthcoach.entity.enums.ThemePreference;
+import com.fazariadis.strengthcoach.entity.enums.UnitSystem;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
@@ -29,6 +33,18 @@ public class UserResponse {
 
 	@Schema(description = "Whether the initial workspace selection has been completed")
 	private boolean onboardingCompleted;
+
+	@Schema(description = "Preferred weight unit system", example = "METRIC")
+	private UnitSystem unitSystem;
+
+	@Schema(description = "Primary training objective", example = "STRENGTH")
+	private PrimaryObjective primaryObjective;
+
+	@Schema(description = "Self-reported lifting experience", example = "INTERMEDIATE")
+	private LiftingExperience liftingExperience;
+
+	@Schema(description = "Preferred application color theme", example = "DARK")
+	private ThemePreference themePreference;
 
 	@Schema(description = "Date the account was created")
 	private Instant createdAt;

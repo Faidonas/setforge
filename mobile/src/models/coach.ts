@@ -36,3 +36,26 @@ export type CoachDashboard = {
   attentionClients: CoachClientSummary[];
   recentWorkouts: CoachWorkoutSummary[];
 };
+
+export type CoachTemplateAssignee = {
+  userId: number;
+  displayName: string;
+  email: string;
+  assignedAt: string;
+};
+
+export type CoachWorkoutTemplate = {
+  template: import('@/models/workout-template').WorkoutTemplate;
+  assignees: CoachTemplateAssignee[];
+};
+
+export type AdminCoachingRelationship = {
+  relationshipId: number;
+  coachId: number;
+  coachName: string;
+  clientId: number;
+  clientName: string;
+  clientEmail: string;
+  status: 'PENDING' | 'ACTIVE' | 'ENDED';
+  startedAt: string;
+};

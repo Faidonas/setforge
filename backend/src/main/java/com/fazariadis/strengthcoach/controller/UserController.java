@@ -1,7 +1,9 @@
 package com.fazariadis.strengthcoach.controller;
 
 import com.fazariadis.strengthcoach.dto.UserResponse;
+import com.fazariadis.strengthcoach.dto.CompleteOnboardingRequest;
 import com.fazariadis.strengthcoach.dto.UpdateAccountTypeRequest;
+import com.fazariadis.strengthcoach.dto.UpdateThemePreferenceRequest;
 import com.fazariadis.strengthcoach.service.UserService;
 import com.fazariadis.strengthcoach.service.AuthenticatedUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,5 +43,23 @@ public class UserController {
 			@Valid @RequestBody UpdateAccountTypeRequest request) {
 		return userService.updateAccountType(
 				authenticatedUserService.resolve(jwt).getId(), request.getAccountType());
+	}
+
+	@PutMapping("/me/onboarding")
+	@Operation(summary = "Complete the authenticated user's initial profile setup")
+	public UserResponse completeOnboarding(
+			@AuthenticationPrincipal Jwt jwt,
+			@Valid @RequestBody CompleteOnboardingRequest request) {
+		return userService.completeOnboarding(
+				authenticatedUserService.resolve(jwt).getId(), request);
+	}
+
+	@PutMapping("/me/theme")
+	@Operation(summary = "Update the authenticated user's application theme")
+	public UserResponse updateThemePreference(
+			@AuthenticationPrincipal Jwt jwt,
+			@Valid @RequestBody UpdateThemePreferenceRequest request) {
+		return userService.updateThemePreference(
+				authenticatedUserService.resolve(jwt).getId(), request.getThemePreference());
 	}
 }

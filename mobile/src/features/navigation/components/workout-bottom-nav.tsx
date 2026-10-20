@@ -5,11 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 
-const homeIcon = require('@/assets/images/figma/home.svg');
-const historyIcon = require('@/assets/images/figma/calendar.svg');
-const startIcon = require('@/assets/images/figma/plus.svg');
-const exercisesIcon = require('@/assets/images/figma/activity.svg');
-const profileIcon = require('@/assets/images/figma/profile.svg');
+const homeIcon = require('@/assets/images/figma/home-nav-home.svg');
+const historyIcon = require('@/assets/images/figma/home-nav-calendar.svg');
+const startIcon = require('@/assets/images/figma/home-nav-plus.svg');
+const exercisesIcon = require('@/assets/images/figma/home-nav-activity.svg');
+const profileIcon = require('@/assets/images/figma/home-nav-user.svg');
 
 type NavigationLabel = 'Home' | 'History' | 'Start' | 'Exercises' | 'Profile';
 
@@ -17,12 +17,13 @@ type NavigationItem = {
   label: NavigationLabel;
   icon: number;
   href?: Href;
+  centerAction?: boolean;
 };
 
 const items: NavigationItem[] = [
-  { label: 'Home', icon: homeIcon },
+  { label: 'Home', icon: homeIcon, href: '/home' },
   { label: 'History', icon: historyIcon, href: '/history' },
-  { label: 'Start', icon: startIcon, href: '/start-workout' },
+  { label: 'Start', icon: startIcon, href: '/start-workout', centerAction: true },
   { label: 'Exercises', icon: exercisesIcon, href: '/exercises' },
   { label: 'Profile', icon: profileIcon, href: '/profile' },
 ];
@@ -46,15 +47,17 @@ export function WorkoutBottomNav({ activeItem = 'Start' }: { activeItem?: Naviga
               key={item.label}
               onPress={href ? () => router.navigate(href) : undefined}
               style={({ pressed }) => [styles.item, pressed && styles.pressedItem]}>
-              <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
+              <View style={[styles.iconContainer, item.centerAction && styles.centerAction]}>
                 <Image
                   source={item.icon}
                   style={styles.icon}
                   contentFit="contain"
-                  tintColor={isActive ? SetForgeColors.accent : SetForgeColors.textSecondary}
+                  tintColor={item.centerAction || isActive ? SetForgeColors.accent : SetForgeColors.textSecondary}
                 />
               </View>
-              <Text style={[styles.label, isActive && styles.activeLabel]}>{item.label}</Text>
+              {!item.centerAction ? (
+                <Text style={[styles.label, isActive && styles.activeLabel]}>{item.label}</Text>
+              ) : null}
             </Pressable>
           );
         })}
@@ -70,15 +73,15 @@ const styles = StyleSheet.create({
     backgroundColor: SetForgeColors.surface,
   },
   navigation: {
-    height: 62,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
   },
   item: {
-    width: 64,
-    height: 52,
+    width: 56,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
@@ -87,17 +90,17 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   iconContainer: {
-    width: 30,
-    height: 28,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderRadius: 7,
   },
-  activeIconContainer: {
+  centerAction: {
+    width: 56,
+    height: 48,
     borderWidth: 1,
     borderColor: SetForgeColors.accent,
+    borderRadius: 8,
     backgroundColor: SetForgeColors.accentTint,
   },
   icon: {

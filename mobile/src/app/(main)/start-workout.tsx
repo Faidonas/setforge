@@ -264,7 +264,7 @@ export default function StartWorkoutScreen() {
               onReorder={reorderTemplates}
               renderItem={(item) => (
                 <WorkoutTemplateCard
-                  onMorePress={(anchor) => {
+                  onMorePress={item.editable === false ? undefined : (anchor) => {
                     setActionAnchor(anchor);
                     setActionTemplate(item);
                   }}
@@ -283,7 +283,7 @@ export default function StartWorkoutScreen() {
         </ScrollView>
         <WorkoutTemplatePreviewModal
           onClose={() => setSelectedTemplate(null)}
-          onEdit={openTemplateEditor}
+          onEdit={selectedTemplate?.editable === false ? undefined : openTemplateEditor}
           onStart={(template) => void startWorkout(template)}
           isStarting={isStartingWorkout || activeWorkout.isHydrating}
           template={selectedTemplate}

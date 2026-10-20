@@ -9,6 +9,7 @@ import com.fazariadis.strengthcoach.dto.WorkoutTemplateSetRequest;
 import com.fazariadis.strengthcoach.entity.Exercise;
 import com.fazariadis.strengthcoach.entity.User;
 import com.fazariadis.strengthcoach.entity.WorkoutTemplate;
+import com.fazariadis.strengthcoach.entity.WorkoutTemplateAssignment;
 import com.fazariadis.strengthcoach.entity.WorkoutTemplateExercise;
 import com.fazariadis.strengthcoach.entity.WorkoutTemplateSet;
 import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
@@ -18,6 +19,7 @@ import com.fazariadis.strengthcoach.mapper.WorkoutTemplateMapper;
 import com.fazariadis.strengthcoach.repository.ExerciseRepository;
 import com.fazariadis.strengthcoach.repository.UserRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateExerciseRepository;
+import com.fazariadis.strengthcoach.repository.WorkoutTemplateAssignmentRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateSetRepository;
 import java.util.ArrayList;
@@ -38,12 +40,22 @@ public class WorkoutTemplateService {
 	private final WorkoutTemplateRepository workoutTemplateRepository;
 	private final WorkoutTemplateExerciseRepository workoutTemplateExerciseRepository;
 	private final WorkoutTemplateSetRepository workoutTemplateSetRepository;
+	private final WorkoutTemplateAssignmentRepository workoutTemplateAssignmentRepository;
 	private final UserRepository userRepository;
 	private final ExerciseRepository exerciseRepository;
 	private final WorkoutTemplateMapper workoutTemplateMapper;
 
 	@Transactional
 	public WorkoutTemplateResponse create(CreateWorkoutTemplateRequest request) {
+		return create(request, true);
+	}
+
+	@Transactional
+	public WorkoutTemplateResponse createUnassigned(CreateWorkoutTemplateRequest request) {
+		return create(request, false);
+	}
+
+	private WorkoutTemplateResponse create(CreateWorkoutTemplateRequest request, boolean assignToOwner) {
 		User owner = userRepository.findById(request.getOwnerId())
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"User " + request.getOwnerId() + " was not found"));
@@ -59,6 +71,14 @@ public class WorkoutTemplateService {
 				.position(nextPosition(owner.getId()))
 				.build());
 		replacePlan(template, request.getExercises(), exercisesById);
+		if (assignToOwner) {
+			workoutTemplateAssignmentRepository.saveAndFlush(WorkoutTemplateAssignment.builder()
+					.workoutTemplate(template)
+					.user(owner)
+					.assignedBy(owner)
+					.position(nextAssignmentPosition(owner.getId()))
+					.build());
+		}
 
 		return loadResponse(template);
 	}
@@ -98,7 +118,11 @@ public class WorkoutTemplateService {
 
 	@Transactional(readOnly = true)
 	public WorkoutTemplateResponse getById(Long templateId, Long ownerId) {
-		return loadResponse(findTemplateForOwner(templateId, ownerId));
+		WorkoutTemplateAssignment assignment = workoutTemplateAssignmentRepository
+				.findByWorkoutTemplate_IdAndUser_Id(templateId, ownerId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Workout template " + templateId + " was not found"));
+		return loadAssignedResponse(assignment, ownerId);
 	}
 
 	@Transactional
@@ -120,35 +144,86 @@ public class WorkoutTemplateService {
 				.toList();
 	}
 
+	@Transactional(readOnly = true)
+	public List<WorkoutTemplateResponse> getAssignedTo(Long userId) {
+		if (!userRepository.existsById(userId)) {
+			throw new ResourceNotFoundException("User " + userId + " was not found");
+		}
+		return workoutTemplateAssignmentRepository
+				.findAllByUser_IdOrderByPositionAscCreatedAtDesc(userId).stream()
+				.map(assignment -> loadAssignedResponse(assignment, userId))
+				.toList();
+	}
+
+	@Transactional
+	public void assign(Long templateId, Long ownerId, Long assigneeId) {
+		WorkoutTemplate template = findTemplateForOwner(templateId, ownerId);
+		if (workoutTemplateAssignmentRepository.existsByWorkoutTemplate_IdAndUser_Id(
+				templateId, assigneeId)) return;
+		User assignee = userRepository.findById(assigneeId)
+				.orElseThrow(() -> new ResourceNotFoundException("User " + assigneeId + " was not found"));
+		workoutTemplateAssignmentRepository.saveAndFlush(WorkoutTemplateAssignment.builder()
+				.workoutTemplate(template)
+				.user(assignee)
+				.assignedBy(template.getOwner())
+				.position(nextAssignmentPosition(assigneeId))
+				.build());
+	}
+
+	@Transactional
+	public void unassign(Long templateId, Long ownerId, Long assigneeId) {
+		findTemplateForOwner(templateId, ownerId);
+		workoutTemplateAssignmentRepository.findByWorkoutTemplate_IdAndUser_Id(templateId, assigneeId)
+				.ifPresent(workoutTemplateAssignmentRepository::delete);
+	}
+
+	@Transactional(readOnly = true)
+	public List<WorkoutTemplateAssignment> getAssignments(Long templateId, Long ownerId) {
+		findTemplateForOwner(templateId, ownerId);
+		return workoutTemplateAssignmentRepository
+				.findAllByWorkoutTemplate_IdOrderByCreatedAtAsc(templateId);
+	}
+
 	@Transactional
 	public void reorder(ReorderWorkoutTemplatesRequest request) {
 		if (!userRepository.existsById(request.getOwnerId())) {
 			throw new ResourceNotFoundException("User " + request.getOwnerId() + " was not found");
 		}
-		List<WorkoutTemplate> templates =
-				workoutTemplateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(request.getOwnerId());
+		List<WorkoutTemplateAssignment> assignments = workoutTemplateAssignmentRepository
+				.findAllByUser_IdOrderByPositionAscCreatedAtDesc(request.getOwnerId());
 		List<Long> requestedIds = request.getTemplateIds();
-		if (requestedIds.size() != templates.size()
+		if (requestedIds.size() != assignments.size()
 				|| new LinkedHashSet<>(requestedIds).size() != requestedIds.size()
-				|| !new LinkedHashSet<>(templates.stream().map(WorkoutTemplate::getId).toList())
+				|| !new LinkedHashSet<>(assignments.stream()
+						.map(assignment -> assignment.getWorkoutTemplate().getId()).toList())
 						.equals(new LinkedHashSet<>(requestedIds))) {
 			throw new InvalidRequestException(
 					"Template order must contain every template owned by user " + request.getOwnerId()
 							+ " exactly once");
 		}
 
-		Map<Long, WorkoutTemplate> templatesById = templates.stream()
-				.collect(Collectors.toMap(WorkoutTemplate::getId, Function.identity()));
+		Map<Long, WorkoutTemplateAssignment> assignmentsByTemplateId = assignments.stream()
+				.collect(Collectors.toMap(
+						assignment -> assignment.getWorkoutTemplate().getId(), Function.identity()));
 		for (int position = 0; position < requestedIds.size(); position++) {
-			templatesById.get(requestedIds.get(position)).setPosition(position);
+			assignmentsByTemplateId.get(requestedIds.get(position)).setPosition(position);
 		}
-		workoutTemplateRepository.saveAll(templates);
-		workoutTemplateRepository.flush();
+		workoutTemplateAssignmentRepository.saveAll(assignments);
+		workoutTemplateAssignmentRepository.flush();
 	}
 
 	private int nextPosition(Long ownerId) {
 		return workoutTemplateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(ownerId).stream()
 				.map(WorkoutTemplate::getPosition)
+				.filter(java.util.Objects::nonNull)
+				.max(Integer::compareTo)
+				.orElse(-1) + 1;
+	}
+
+	private int nextAssignmentPosition(Long userId) {
+		return workoutTemplateAssignmentRepository
+				.findAllByUser_IdOrderByPositionAscCreatedAtDesc(userId).stream()
+				.map(WorkoutTemplateAssignment::getPosition)
 				.filter(java.util.Objects::nonNull)
 				.max(Integer::compareTo)
 				.orElse(-1) + 1;
@@ -270,5 +345,13 @@ public class WorkoutTemplateService {
 						HashMap::new,
 						Collectors.toList()));
 		return workoutTemplateMapper.toResponse(template, templateExercises, setsByExerciseId);
+	}
+
+	private WorkoutTemplateResponse loadAssignedResponse(
+			WorkoutTemplateAssignment assignment, Long userId) {
+		WorkoutTemplateResponse response = loadResponse(assignment.getWorkoutTemplate());
+		response.setPosition(assignment.getPosition());
+		response.setEditable(assignment.getWorkoutTemplate().getOwner().getId().equals(userId));
+		return response;
 	}
 }

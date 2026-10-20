@@ -7,9 +7,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+
+import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RestTimerControl, formatRestTime } from '@/components/rest-timer-control';
@@ -103,7 +104,7 @@ export default function CreateTemplateScreen() {
             onMove={draft.moveExercise}
             headerComponent={<>
             <Text style={styles.fieldLabel}>TEMPLATE NAME</Text>
-            <TextInput
+            <NonCredentialTextInput
               accessibilityLabel="Template name"
               autoFocus
               maxLength={100}
@@ -115,7 +116,7 @@ export default function CreateTemplateScreen() {
             />
 
             <Text style={styles.fieldLabel}>DESCRIPTION (OPTIONAL)</Text>
-            <TextInput
+            <NonCredentialTextInput
               accessibilityLabel="Template description"
               maxLength={500}
               multiline
@@ -345,7 +346,7 @@ type NumericInputProps = {
 function NumericInput(props: NumericInputProps) {
   return (
     <View style={styles.metricColumn}>
-      <TextInput
+      <NonCredentialTextInput
         {...props}
         keyboardType="decimal-pad"
         maxLength={7}

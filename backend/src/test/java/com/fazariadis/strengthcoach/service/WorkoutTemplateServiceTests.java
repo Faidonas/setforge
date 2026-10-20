@@ -17,6 +17,7 @@ import com.fazariadis.strengthcoach.dto.WorkoutTemplateSetRequest;
 import com.fazariadis.strengthcoach.entity.Exercise;
 import com.fazariadis.strengthcoach.entity.User;
 import com.fazariadis.strengthcoach.entity.WorkoutTemplate;
+import com.fazariadis.strengthcoach.entity.WorkoutTemplateAssignment;
 import com.fazariadis.strengthcoach.entity.WorkoutTemplateExercise;
 import com.fazariadis.strengthcoach.entity.WorkoutTemplateSet;
 import com.fazariadis.strengthcoach.entity.enums.ExerciseType;
@@ -27,6 +28,7 @@ import com.fazariadis.strengthcoach.mapper.WorkoutTemplateMapper;
 import com.fazariadis.strengthcoach.repository.ExerciseRepository;
 import com.fazariadis.strengthcoach.repository.UserRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateExerciseRepository;
+import com.fazariadis.strengthcoach.repository.WorkoutTemplateAssignmentRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateSetRepository;
 import java.math.BigDecimal;
@@ -44,12 +46,15 @@ class WorkoutTemplateServiceTests {
 			mock(WorkoutTemplateExerciseRepository.class);
 	private final WorkoutTemplateSetRepository templateSetRepository =
 			mock(WorkoutTemplateSetRepository.class);
+	private final WorkoutTemplateAssignmentRepository templateAssignmentRepository =
+			mock(WorkoutTemplateAssignmentRepository.class);
 	private final UserRepository userRepository = mock(UserRepository.class);
 	private final ExerciseRepository exerciseRepository = mock(ExerciseRepository.class);
 	private final WorkoutTemplateService service = new WorkoutTemplateService(
 			templateRepository,
 			templateExerciseRepository,
 			templateSetRepository,
+			templateAssignmentRepository,
 			userRepository,
 			exerciseRepository,
 			new WorkoutTemplateMapper());
@@ -308,29 +313,38 @@ class WorkoutTemplateServiceTests {
 		WorkoutTemplate first = WorkoutTemplate.builder().id(10L).position(0).build();
 		WorkoutTemplate second = WorkoutTemplate.builder().id(20L).position(1).build();
 		WorkoutTemplate third = WorkoutTemplate.builder().id(30L).position(2).build();
+		WorkoutTemplateAssignment firstAssignment = WorkoutTemplateAssignment.builder()
+				.workoutTemplate(first).position(0).build();
+		WorkoutTemplateAssignment secondAssignment = WorkoutTemplateAssignment.builder()
+				.workoutTemplate(second).position(1).build();
+		WorkoutTemplateAssignment thirdAssignment = WorkoutTemplateAssignment.builder()
+				.workoutTemplate(third).position(2).build();
 		when(userRepository.existsById(1L)).thenReturn(true);
-		when(templateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(1L))
-				.thenReturn(List.of(first, second, third));
+		when(templateAssignmentRepository.findAllByUser_IdOrderByPositionAscCreatedAtDesc(1L))
+				.thenReturn(List.of(firstAssignment, secondAssignment, thirdAssignment));
 
 		service.reorder(ReorderWorkoutTemplatesRequest.builder()
 				.ownerId(1L)
 				.templateIds(List.of(30L, 10L, 20L))
 				.build());
 
-		assertThat(third.getPosition()).isZero();
-		assertThat(first.getPosition()).isEqualTo(1);
-		assertThat(second.getPosition()).isEqualTo(2);
-		verify(templateRepository).saveAll(List.of(first, second, third));
-		verify(templateRepository).flush();
+		assertThat(thirdAssignment.getPosition()).isZero();
+		assertThat(firstAssignment.getPosition()).isEqualTo(1);
+		assertThat(secondAssignment.getPosition()).isEqualTo(2);
+		verify(templateAssignmentRepository)
+				.saveAll(List.of(firstAssignment, secondAssignment, thirdAssignment));
+		verify(templateAssignmentRepository).flush();
 	}
 
 	@Test
 	void rejectsIncompleteTemplateOrder() {
 		when(userRepository.existsById(1L)).thenReturn(true);
-		when(templateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(1L))
+		when(templateAssignmentRepository.findAllByUser_IdOrderByPositionAscCreatedAtDesc(1L))
 				.thenReturn(List.of(
-						WorkoutTemplate.builder().id(10L).position(0).build(),
-						WorkoutTemplate.builder().id(20L).position(1).build()));
+						WorkoutTemplateAssignment.builder()
+								.workoutTemplate(WorkoutTemplate.builder().id(10L).build()).position(0).build(),
+						WorkoutTemplateAssignment.builder()
+								.workoutTemplate(WorkoutTemplate.builder().id(20L).build()).position(1).build()));
 
 		assertThatThrownBy(() -> service.reorder(ReorderWorkoutTemplatesRequest.builder()
 				.ownerId(1L)
@@ -338,6 +352,6 @@ class WorkoutTemplateServiceTests {
 				.build()))
 				.isInstanceOf(InvalidRequestException.class)
 				.hasMessageContaining("exactly once");
-		verify(templateRepository, never()).saveAll(any());
+		verify(templateAssignmentRepository, never()).saveAll(any());
 	}
 }

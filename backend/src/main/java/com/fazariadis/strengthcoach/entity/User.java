@@ -1,6 +1,10 @@
 package com.fazariadis.strengthcoach.entity;
 
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
+import com.fazariadis.strengthcoach.entity.enums.LiftingExperience;
+import com.fazariadis.strengthcoach.entity.enums.PrimaryObjective;
+import com.fazariadis.strengthcoach.entity.enums.ThemePreference;
+import com.fazariadis.strengthcoach.entity.enums.UnitSystem;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -49,6 +53,26 @@ public class User {
 	@Builder.Default
 	@Column(name = "onboarding_completed", nullable = false)
 	private boolean onboardingCompleted = false;
+
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "unit_system", nullable = false, length = 20)
+	private UnitSystem unitSystem = UnitSystem.METRIC;
+
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "primary_objective", nullable = false, length = 30)
+	private PrimaryObjective primaryObjective = PrimaryObjective.STRENGTH;
+
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "lifting_experience", nullable = false, length = 20)
+	private LiftingExperience liftingExperience = LiftingExperience.INTERMEDIATE;
+
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "theme_preference", nullable = false, length = 10)
+	private ThemePreference themePreference = ThemePreference.DARK;
 
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
