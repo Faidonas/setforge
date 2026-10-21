@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 
 import { CoachColors } from '@/constants/setforge-theme';
-import { ActionButton, PageHeading, Panel, StatusBadge, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
+import { ActionButton, HoverPressable, PageHeading, Panel, StatusBadge, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
 import { useCoachResource } from '@/features/coach/use-coach-resource';
 import type { AdminCoachingRelationship } from '@/models/coach';
 import type { UserProfile } from '@/models/user';
@@ -123,14 +123,15 @@ function CoachOption({
   selected: boolean;
 }) {
   return (
-    <Pressable
+    <HoverPressable
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
+      hoverStyle={styles.coachOptionHovered}
       onPress={onPress}
-      style={({ pressed }) => [
+      pressedStyle={styles.pressed}
+      style={[
         styles.coachOption,
         selected && styles.coachOptionSelected,
-        pressed && styles.pressed,
       ]}>
       <View style={[styles.radio, selected && styles.radioSelected]}>
         {selected ? <View style={styles.radioDot} /> : null}
@@ -142,7 +143,7 @@ function CoachOption({
       <StatusBadge tone={coach.accountType === 'ADMIN' ? 'warning' : 'muted'}>
         {coach.accountType === 'ADMIN' ? 'Admin' : 'Coach'}
       </StatusBadge>
-    </Pressable>
+    </HoverPressable>
   );
 }
 
@@ -158,6 +159,7 @@ const styles = StyleSheet.create({
   help: { color: CoachColors.textSecondary, fontSize: 11, lineHeight: 18 },
   coachList: { gap: 8 },
   coachOption: { minHeight: 64, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 7, backgroundColor: CoachColors.canvas },
+  coachOptionHovered: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.surfaceMuted, transform: [{ translateX: 3 }] },
   coachOptionSelected: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentTint },
   radio: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: CoachColors.textSecondary, borderRadius: 9 },
   radioSelected: { borderColor: CoachColors.accentText },

@@ -117,6 +117,9 @@ public class CoachDashboardService {
 		Instant cutoff = Instant.now().minus(REPORTING_WINDOW);
 		List<WorkoutSession> sessions = completedSessions(clientId);
 		List<WorkoutSession> inWindow = sessions.stream().filter(session -> completedAfter(session, cutoff)).toList();
+		List<WorkoutTemplateResponse> assignedTemplates = workoutTemplateService.getAssignedTo(clientId).stream()
+				.filter(template -> coach.getId().equals(template.getOwnerId()))
+				.toList();
 		CoachClientDetailResponse response = CoachClientDetailResponse.builder()
 				.id(relationship.getClient().getId())
 				.displayName(relationship.getClient().getDisplayName())
@@ -127,11 +130,13 @@ public class CoachDashboardService {
 				.totalVolumeLast28Days(inWindow.stream().map(this::calculateVolume)
 						.reduce(BigDecimal.ZERO, BigDecimal::add))
 				.lastWorkoutAt(sessions.isEmpty() ? null : sessions.getFirst().getCompletedAt())
+				.assignedTemplates(assignedTemplates)
 				.recentWorkouts(sessions.stream().limit(8)
 						.map(session -> toWorkoutSummary(session, relationship.getClient())).toList())
 				.build();
-		log.info("area=coach-dashboard action=get-client event=success coachUserId={} clientUserId={} recentWorkoutCount={} durationMs={}",
-				coach.getId(), clientId, response.getRecentWorkouts().size(), elapsedMillis(startedAt));
+		log.info("area=coach-dashboard action=get-client event=success coachUserId={} clientUserId={} assignedTemplateCount={} recentWorkoutCount={} durationMs={}",
+				coach.getId(), clientId, response.getAssignedTemplates().size(),
+				response.getRecentWorkouts().size(), elapsedMillis(startedAt));
 		return response;
 	}
 

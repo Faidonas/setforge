@@ -13,6 +13,7 @@ import com.fazariadis.strengthcoach.entity.CoachingRelationship;
 import com.fazariadis.strengthcoach.entity.User;
 import com.fazariadis.strengthcoach.entity.enums.AccountType;
 import com.fazariadis.strengthcoach.entity.enums.CoachingStatus;
+import com.fazariadis.strengthcoach.entity.enums.WorkoutSessionStatus;
 import com.fazariadis.strengthcoach.exception.ForbiddenOperationException;
 import com.fazariadis.strengthcoach.exception.ResourceNotFoundException;
 import com.fazariadis.strengthcoach.repository.CoachingRelationshipRepository;
@@ -20,6 +21,7 @@ import com.fazariadis.strengthcoach.repository.WorkoutSessionExerciseRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSessionRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutSetRepository;
 import com.fazariadis.strengthcoach.repository.WorkoutTemplateRepository;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -104,5 +106,30 @@ class CoachDashboardServiceTests {
 
 		assertThat(request.getOwnerId()).isEqualTo(42L);
 		verify(workoutTemplateService).createUnassigned(request);
+	}
+
+	@Test
+	void clientDetailsIncludeOnlyCoachOwnedAssignedTemplates() {
+		User coach = User.builder().id(42L).accountType(AccountType.PERSONAL_TRAINER).build();
+		User client = User.builder().id(7L).displayName("Alex Client").email("alex@example.com").build();
+		CoachingRelationship relationship = CoachingRelationship.builder()
+				.trainer(coach)
+				.client(client)
+				.status(CoachingStatus.ACTIVE)
+				.startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+				.build();
+		when(relationshipRepository.findAllByTrainer_IdAndStatusOrderByCreatedAtDesc(
+				42L, CoachingStatus.ACTIVE)).thenReturn(List.of(relationship));
+		when(workoutSessionRepository.findAllByUser_IdAndStatusOrderByStartedAtDesc(
+				7L, WorkoutSessionStatus.COMPLETED)).thenReturn(List.of());
+		when(workoutTemplateService.getAssignedTo(7L)).thenReturn(List.of(
+				WorkoutTemplateResponse.builder().id(1L).ownerId(42L).name("Upper A").build(),
+				WorkoutTemplateResponse.builder().id(2L).ownerId(99L).name("Other coach plan").build()));
+
+		var response = service.getClient(coach, 7L);
+
+		assertThat(response.getAssignedTemplates()).singleElement()
+				.extracting(WorkoutTemplateResponse::getName)
+				.isEqualTo("Upper A");
 	}
 }

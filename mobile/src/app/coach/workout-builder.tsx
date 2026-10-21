@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 
@@ -9,6 +9,7 @@ import { formatRestTime, RestTimerControl } from '@/components/rest-timer-contro
 import { CoachColors } from '@/constants/setforge-theme';
 import {
   ActionButton,
+  HoverPressable,
   PageHeading,
   Panel,
   StatusBadge,
@@ -158,22 +159,23 @@ function WorkoutBuilder() {
           {exercises?.map((exercise) => {
             const active = draft.exercises.some((item) => item.exercise.id === exercise.id);
             return (
-              <Pressable
+              <HoverPressable
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
+                hoverStyle={styles.libraryRowHovered}
                 key={exercise.id}
                 onPress={() => toggleExercise(exercise)}
-                style={({ pressed }) => [
+                pressedStyle={styles.pressed}
+                style={[
                   styles.libraryRow,
                   active && styles.libraryRowActive,
-                  pressed && styles.pressed,
                 ]}>
                 <View style={styles.libraryCopy}>
                   <Text style={styles.exerciseName}>{exercise.name}</Text>
                   <Text style={styles.muted}>{exercise.primaryMuscle} · {exercise.equipment}</Text>
                 </View>
                 <Text style={styles.add}>{active ? '✓' : '+'}</Text>
-              </Pressable>
+              </HoverPressable>
             );
           })}
         </Panel>
@@ -232,12 +234,14 @@ function ExerciseCard({
         />
       ))}
 
-      <Pressable
+      <HoverPressable
         accessibilityRole="button"
+        hoverStyle={styles.addSetButtonHovered}
         onPress={() => draft.addSet(exercise.clientId)}
-        style={({ pressed }) => [styles.addSetButton, pressed && styles.pressed]}>
+        pressedStyle={styles.pressed}
+        style={styles.addSetButton}>
         <Text style={styles.addSetText}>+ ADD SET ({formatRestTime(lastSet?.restSeconds)})</Text>
-      </Pressable>
+      </HoverPressable>
     </Panel>
   );
 }
@@ -296,14 +300,16 @@ function SetEditor({
             value={isTimed ? set.targetTimeSeconds : set.targetReps}
           />
         </View>
-        <Pressable
+        <HoverPressable
           accessibilityLabel={`Remove set ${setIndex + 1}`}
           accessibilityRole="button"
           disabled={!canRemove}
+          hoverStyle={styles.removeSetHovered}
           onPress={() => draft.removeSet(exercise.clientId, set.clientId)}
-          style={({ pressed }) => [styles.removeColumn, pressed && styles.pressed]}>
+          pressedStyle={styles.pressed}
+          style={styles.removeColumn}>
           <Text style={[styles.removeSet, !canRemove && styles.removeSetDisabled]}>×</Text>
-        </Pressable>
+        </HoverPressable>
       </View>
       <RestTimerControl
         onChange={(value) => draft.updateSet(exercise.clientId, set.clientId, 'restSeconds', value)}
@@ -350,13 +356,15 @@ function SmallAction({
   danger?: boolean;
 }) {
   return (
-    <Pressable
+    <HoverPressable
       accessibilityRole="button"
       disabled={disabled}
+      hoverStyle={danger ? styles.smallActionDangerHovered : styles.smallActionHovered}
       onPress={onPress}
-      style={({ pressed }) => [styles.smallAction, disabled && styles.disabled, pressed && styles.pressed]}>
+      pressedStyle={styles.pressed}
+      style={[styles.smallAction, disabled && styles.disabled]}>
       <Text style={[styles.smallActionText, danger && styles.danger]}>{label}</Text>
-    </Pressable>
+    </HoverPressable>
   );
 }
 
@@ -383,6 +391,8 @@ const styles = StyleSheet.create({
   exerciseName: { color: CoachColors.textPrimary, fontSize: 13, fontWeight: '800' },
   orderActions: { flexDirection: 'row', gap: 6 },
   smallAction: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: CoachColors.border, borderRadius: 6, backgroundColor: CoachColors.surface },
+  smallActionHovered: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentTint, transform: [{ translateY: -1 }] },
+  smallActionDangerHovered: { borderColor: CoachColors.danger, backgroundColor: 'rgba(185, 28, 28, 0.08)', transform: [{ translateY: -1 }] },
   smallActionText: { color: CoachColors.accentText, fontSize: 17, fontWeight: '900' },
   danger: { color: CoachColors.danger },
   disabled: { opacity: 0.28 },
@@ -392,6 +402,7 @@ const styles = StyleSheet.create({
   numberColumn: { width: 42 },
   metrics: { flex: 1, flexDirection: 'row', gap: 10 },
   removeColumn: { width: 32, height: 42, alignItems: 'center', justifyContent: 'center' },
+  removeSetHovered: { borderRadius: 6, backgroundColor: 'rgba(185, 28, 28, 0.08)' },
   setHeading: { flex: 1, color: CoachColors.textSecondary, fontFamily: 'monospace', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   setNumber: { height: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: CoachColors.accentText, borderRadius: 7 },
   setNumberText: { color: CoachColors.accentText, fontFamily: 'monospace', fontSize: 13, fontWeight: '900' },
@@ -399,11 +410,13 @@ const styles = StyleSheet.create({
   removeSet: { color: CoachColors.danger, fontSize: 21, fontWeight: '800' },
   removeSetDisabled: { color: CoachColors.textDisabled },
   addSetButton: { height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 7, backgroundColor: CoachColors.surfaceMuted },
+  addSetButtonHovered: { borderWidth: 1, borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentTint, transform: [{ translateY: -1 }] },
   addSetText: { color: CoachColors.textPrimary, fontSize: 11, fontWeight: '900' },
   emptyPanel: { padding: 28, alignItems: 'center' },
   emptyTitle: { color: CoachColors.textPrimary, fontSize: 14, fontWeight: '800' },
   muted: { marginTop: 4, color: CoachColors.textSecondary, fontSize: 10, lineHeight: 15 },
   libraryRow: { minHeight: 58, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 7 },
+  libraryRowHovered: { paddingLeft: 15, borderColor: CoachColors.accentText, backgroundColor: CoachColors.surfaceMuted },
   libraryCopy: { flex: 1, minWidth: 0 },
   libraryRowActive: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentTint },
   pressed: { opacity: 0.68 },

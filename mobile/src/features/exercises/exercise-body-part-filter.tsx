@@ -1,19 +1,23 @@
+import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AnchoredMenuModal, type MenuAnchor } from '@/components/anchored-menu-modal';
-import { SetForgeColors } from '@/constants/setforge-theme';
+import { CoachColors, SetForgeColors } from '@/constants/setforge-theme';
 import {
   exerciseBodyParts,
   type ExerciseBodyPart,
 } from '@/features/exercises/exercise-library-utils';
 
+const chevronDownIcon = require('@/assets/images/coach-web-light/chevron-down.svg');
+
 type ExerciseBodyPartFilterProps = {
   value: ExerciseBodyPart;
   onChange: (value: ExerciseBodyPart) => void;
+  variant?: 'app' | 'coach';
 };
 
-export function ExerciseBodyPartFilter({ value, onChange }: ExerciseBodyPartFilterProps) {
+export function ExerciseBodyPartFilter({ value, onChange, variant = 'app' }: ExerciseBodyPartFilterProps) {
   const anchorRef = useRef<View>(null);
   const [anchor, setAnchor] = useState<MenuAnchor | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -32,9 +36,14 @@ export function ExerciseBodyPartFilter({ value, onChange }: ExerciseBodyPartFilt
         accessibilityLabel={`Body part filter, ${value}`}
         accessibilityRole="button"
         onPress={open}
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-        <Text numberOfLines={1} style={styles.buttonLabel}>{value}</Text>
-        <Text style={styles.chevron}>⌄</Text>
+        style={({ pressed }) => [styles.button, variant === 'coach' && styles.coachButton, pressed && styles.buttonPressed]}>
+        <Text numberOfLines={1} style={[styles.buttonLabel, variant === 'coach' && styles.coachButtonLabel]}>{value}</Text>
+        <Image
+          contentFit="contain"
+          source={chevronDownIcon}
+          style={styles.chevronIcon}
+          tintColor={variant === 'coach' ? CoachColors.textSecondary : SetForgeColors.textSecondary}
+        />
       </Pressable>
 
       <AnchoredMenuModal
@@ -44,7 +53,7 @@ export function ExerciseBodyPartFilter({ value, onChange }: ExerciseBodyPartFilt
         onClose={() => setIsOpen(false)}
         visible={isOpen}
         width={224}>
-        <View style={styles.menu}>
+        <View style={[styles.menu, variant === 'coach' && styles.coachMenu]}>
           {exerciseBodyParts.map((bodyPart, index) => {
             const selected = bodyPart === value;
             return (
@@ -57,14 +66,14 @@ export function ExerciseBodyPartFilter({ value, onChange }: ExerciseBodyPartFilt
                 }}
                 style={({ pressed }) => [
                   styles.menuItem,
-                  index > 0 && styles.menuItemBorder,
-                  selected && styles.menuItemSelected,
-                  pressed && styles.menuItemPressed,
+                  index > 0 && (variant === 'coach' ? styles.coachMenuItemBorder : styles.menuItemBorder),
+                  selected && (variant === 'coach' ? styles.coachMenuItemSelected : styles.menuItemSelected),
+                  pressed && (variant === 'coach' ? styles.coachMenuItemPressed : styles.menuItemPressed),
                 ]}>
-                <Text style={[styles.menuItemLabel, selected && styles.menuItemLabelSelected]}>
+                <Text style={[styles.menuItemLabel, variant === 'coach' && styles.coachMenuItemLabel, selected && (variant === 'coach' ? styles.coachMenuItemLabelSelected : styles.menuItemLabelSelected)]}>
                   {bodyPart}
                 </Text>
-                {selected && <Text style={styles.checkmark}>✓</Text>}
+                {selected && <Text style={[styles.checkmark, variant === 'coach' && styles.coachCheckmark]}>✓</Text>}
               </Pressable>
             );
           })}
@@ -88,18 +97,15 @@ const styles = StyleSheet.create({
     backgroundColor: SetForgeColors.surfaceMuted,
   },
   buttonPressed: { opacity: 0.72 },
+  coachButton: { height: 46, minWidth: 174, borderColor: CoachColors.inputBorder, borderRadius: 9, backgroundColor: CoachColors.surface },
   buttonLabel: {
     flex: 1,
     color: SetForgeColors.textPrimary,
     fontSize: 13,
     fontWeight: '700',
   },
-  chevron: {
-    marginLeft: 10,
-    color: SetForgeColors.textSecondary,
-    fontSize: 18,
-    lineHeight: 18,
-  },
+  coachButtonLabel: { color: CoachColors.textPrimary },
+  chevronIcon: { width: 16, height: 16, marginLeft: 10 },
   menu: {
     overflow: 'hidden',
     borderWidth: 1,
@@ -107,6 +113,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: SetForgeColors.surfaceMuted,
   },
+  coachMenu: { borderColor: CoachColors.border, backgroundColor: CoachColors.surface },
   menuItem: {
     height: 42,
     flexDirection: 'row',
@@ -115,9 +122,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   menuItemBorder: { borderTopWidth: 1, borderTopColor: SetForgeColors.border },
+  coachMenuItemBorder: { borderTopWidth: 1, borderTopColor: CoachColors.border },
   menuItemSelected: { backgroundColor: SetForgeColors.accentTint },
+  coachMenuItemSelected: { backgroundColor: CoachColors.accentTint },
   menuItemPressed: { backgroundColor: SetForgeColors.surface },
+  coachMenuItemPressed: { backgroundColor: CoachColors.surfaceMuted },
   menuItemLabel: { color: SetForgeColors.textPrimary, fontSize: 14, fontWeight: '600' },
+  coachMenuItemLabel: { color: CoachColors.textPrimary },
   menuItemLabelSelected: { color: SetForgeColors.accent },
+  coachMenuItemLabelSelected: { color: CoachColors.accentText },
   checkmark: { color: SetForgeColors.accent, fontSize: 15, fontWeight: '900' },
+  coachCheckmark: { color: CoachColors.accentText },
 });

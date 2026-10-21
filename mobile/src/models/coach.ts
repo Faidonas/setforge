@@ -1,3 +1,5 @@
+import type { WorkoutTemplate } from '@/models/workout-template';
+
 export type CoachWorkoutSummary = {
   id: number;
   clientId: number;
@@ -22,6 +24,7 @@ export type CoachClientSummary = {
 
 export type CoachClientDetail = Omit<CoachClientSummary, 'lastWorkoutName'> & {
   totalVolumeLast28Days: number;
+  assignedTemplates: WorkoutTemplate[];
   recentWorkouts: CoachWorkoutSummary[];
 };
 
@@ -45,7 +48,7 @@ export type CoachTemplateAssignee = {
 };
 
 export type CoachWorkoutTemplate = {
-  template: import('@/models/workout-template').WorkoutTemplate;
+  template: WorkoutTemplate;
   assignees: CoachTemplateAssignee[];
 };
 

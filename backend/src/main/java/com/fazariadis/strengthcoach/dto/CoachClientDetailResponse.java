@@ -23,5 +23,6 @@ public class CoachClientDetailResponse {
 	private long completedWorkoutsLast28Days;
 	private BigDecimal totalVolumeLast28Days;
 	private Instant lastWorkoutAt;
+	private List<WorkoutTemplateResponse> assignedTemplates;
 	private List<CoachWorkoutSummaryResponse> recentWorkouts;
 }

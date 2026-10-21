@@ -1,11 +1,12 @@
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CoachColors } from '@/constants/setforge-theme';
 import {
   ActionButton,
+  HoverPressable,
   PageHeading,
   Panel,
   StatusBadge,
@@ -127,12 +128,14 @@ export default function CoachTemplatesScreen() {
                 )}
               </View>
 
-              <Pressable
+              <HoverPressable
                 accessibilityRole="button"
+                hoverStyle={styles.assignButtonHovered}
                 onPress={() => setOpenTemplateId(isOpen ? null : item.template.id)}
-                style={({ pressed }) => [styles.assignButton, pressed && styles.pressed]}>
+                pressedStyle={styles.pressed}
+                style={styles.assignButton}>
                 <Text style={styles.assignButtonText}>{isOpen ? 'DONE' : 'MANAGE ASSIGNMENTS'}</Text>
-              </Pressable>
+              </HoverPressable>
 
               {isOpen ? (
                 <View style={styles.assignmentPanel}>
@@ -174,15 +177,16 @@ function AssignmentTarget({
   target: Pick<CoachClientSummary, 'id' | 'displayName' | 'email'>;
 }) {
   return (
-    <Pressable
+    <HoverPressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: assigned, disabled: busy }}
       disabled={busy}
+      hoverStyle={styles.targetRowHovered}
       onPress={onPress}
-      style={({ pressed }) => [
+      pressedStyle={styles.pressed}
+      style={[
         styles.targetRow,
         assigned && styles.targetRowAssigned,
-        (pressed || busy) && styles.pressed,
       ]}>
       <View style={styles.targetCopy}>
         <Text style={styles.targetName}>{target.displayName}</Text>
@@ -193,7 +197,7 @@ function AssignmentTarget({
           {busy ? '…' : assigned ? '✓' : '+'}
         </Text>
       </View>
-    </Pressable>
+    </HoverPressable>
   );
 }
 
@@ -217,10 +221,12 @@ const styles = StyleSheet.create({
   assigneeChipText: { color: CoachColors.accentText, fontSize: 9, fontWeight: '800' },
   unassignedText: { color: CoachColors.textDisabled, fontSize: 11 },
   assignButton: { height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: CoachColors.accentText, borderRadius: 7 },
+  assignButtonHovered: { transform: [{ translateY: -2 }], backgroundColor: CoachColors.accentTint, boxShadow: '0 7px 16px rgba(0, 185, 198, 0.12)' },
   assignButtonText: { color: CoachColors.accentText, fontSize: 10, fontWeight: '900' },
   assignmentPanel: { gap: 8, paddingTop: 4 },
   assignmentHint: { marginBottom: 2, color: CoachColors.textSecondary, fontSize: 10, lineHeight: 15 },
   targetRow: { minHeight: 52, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 7, backgroundColor: CoachColors.surface },
+  targetRowHovered: { paddingLeft: 15, borderColor: CoachColors.inputBorder, backgroundColor: CoachColors.surfaceMuted },
   targetRowAssigned: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentTint },
   targetCopy: { flex: 1, minWidth: 0 },
   targetName: { color: CoachColors.textPrimary, fontSize: 11, fontWeight: '800' },

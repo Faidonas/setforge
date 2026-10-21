@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 
 import { CoachColors } from '@/constants/setforge-theme';
 import { useAuth } from '@/features/auth/auth-context';
-import { PageHeading, Panel, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
+import { HoverPressable, PageHeading, Panel, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
 
 export default function CoachSettingsScreen() {
   const auth = useAuth();
@@ -92,13 +92,15 @@ export default function CoachSettingsScreen() {
             value={confirmPassword}
           />
           {message ? <Text style={[styles.message, success && styles.success]}>{message}</Text> : null}
-          <Pressable
+          <HoverPressable
             accessibilityRole="button"
             disabled={submitting}
+            hoverStyle={styles.buttonHovered}
             onPress={() => void updatePassword()}
-            style={({ pressed }) => [styles.button, (pressed || submitting) && styles.pressed]}>
+            pressedStyle={styles.pressed}
+            style={styles.button}>
             <Text style={styles.buttonLabel}>{submitting ? 'UPDATING…' : 'UPDATE PASSWORD'}</Text>
-          </Pressable>
+          </HoverPressable>
         </Panel>
       </View>
     </View>
@@ -121,6 +123,7 @@ const styles = StyleSheet.create({
   message: { color: CoachColors.danger, fontSize: 11, lineHeight: 17 },
   success: { color: CoachColors.accentText },
   button: { height: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 7, backgroundColor: CoachColors.accent },
+  buttonHovered: { transform: [{ translateY: -2 }], boxShadow: '0 9px 22px rgba(0, 185, 198, 0.18)' },
   buttonLabel: { color: CoachColors.buttonText, fontSize: 11, fontWeight: '900' },
   pressed: { opacity: 0.72 },
 });
