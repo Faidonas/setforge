@@ -1,11 +1,11 @@
 # Practice exercise dataset
 
-SetForge currently uses the public
+Spotter currently uses the public
 [`hasaneyldrm/exercises-dataset`](https://github.com/hasaneyldrm/exercises-dataset) repository for
 local development and learning.
 
 The source catalogue contains 1,324 exercises, English instructions, 180x180 thumbnails, and
-180x180 animated GIF demonstrations. SetForge keeps the original exercise source ID so the import
+180x180 animated GIF demonstrations. Spotter keeps the original exercise source ID so the import
 can be run repeatedly without creating another copy of every exercise.
 
 The app presents a curated core catalogue of 220 common exercises. This keeps the library practical
@@ -22,7 +22,7 @@ GIFs are owned by GymVisual. They are included in this practice project with the
 and attribution, but the dataset explicitly says that cloning it does not grant a downstream media
 licence.
 
-Before SetForge is published, the media must be licensed directly from GymVisual or replaced with
+Before Spotter is published, the media must be licensed directly from GymVisual or replaced with
 assets whose licence permits publication.
 
 ## Loading the catalogue
@@ -41,7 +41,7 @@ inserted, and records imported previously are refreshed.
 `core-exercise-catalog.sql` marks the selected core exercises as visible. It does not delete the
 other imported rows, so existing templates and workout history can still resolve them by ID. The
 exercise list and picker endpoints return visible exercises only, while direct lookup by ID remains
-available for every exercise. Exercises created directly in SetForge remain visible by default.
+available for every exercise. Exercises created directly in Spotter remain visible by default.
 
 The backend serves thumbnails below `/exercise-media/images/` and animations below
 `/exercise-media/gifs/`. Every imported API response includes the required GymVisual attribution.

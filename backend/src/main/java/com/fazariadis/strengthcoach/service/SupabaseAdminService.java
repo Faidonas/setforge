@@ -123,7 +123,7 @@ public class SupabaseAdminService {
 		if (!configured) {
 			log.error("integration=supabase-auth event=configuration-required status=missing");
 			throw new InvalidRequestException(
-					"Supabase admin access is not configured on the SetForge backend");
+					"Supabase admin access is not configured on the Spotter backend");
 		}
 	}
 

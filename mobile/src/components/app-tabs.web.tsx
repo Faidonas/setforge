@@ -7,13 +7,14 @@ import {
   TabListProps,
 } from 'expo-router/ui';
 import { SymbolView } from 'expo-symbols';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { Pressable, useColorScheme, useWindowDimensions, View, StyleSheet } from 'react-native';
 
 import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { SpotterLogo } from '@/components/spotter-logo';
 
 export default function AppTabs() {
   return (
@@ -49,14 +50,14 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 
 export function CustomTabList(props: TabListProps) {
   const scheme = useColorScheme();
+  const { width } = useWindowDimensions();
+  const compact = width < 600;
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
 
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          SetForge
-        </ThemedText>
+        <SpotterLogo width={compact ? 36 : 104} markOnly={compact} appearance={scheme === 'dark' ? 'dark' : 'light'} style={styles.brandLogo} />
 
         {props.children}
 
@@ -89,12 +90,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.five,
     borderRadius: Spacing.five,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     flexGrow: 1,
     gap: Spacing.two,
     maxWidth: MaxContentWidth,
   },
-  brandText: {
+  brandLogo: {
     marginRight: 'auto',
   },
   pressed: {

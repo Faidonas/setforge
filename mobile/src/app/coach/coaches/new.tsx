@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 
 import { CoachColors } from '@/constants/setforge-theme';
+import { CoachTypography } from '@/features/coach/coach-typography';
 import { ActionButton, PageHeading, Panel, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
 import type { UserProfile } from '@/models/user';
 import { createCoachUser } from '@/services/coach-api';
@@ -59,7 +60,7 @@ export default function CreateCoachScreen() {
     <View style={[coachStyles.page, isCompact && coachStyles.pageCompact]}>
         <PageHeading
           title="Create coach"
-          subtitle="Prepare a trainer account or promote an existing SetForge user."
+          subtitle="Prepare a trainer account or promote an existing Spotter user."
           actions={<ActionButton label="Back to dashboard" secondary onPress={() => router.back()} />}
         />
         <View style={[styles.columns, isCompact && styles.columnsCompact]}>
@@ -153,8 +154,9 @@ const styles = StyleSheet.create({
   formCompact: { width: '100%', padding: 18 },
   rail: { flex: 1 },
   railCompact: { width: '100%', flex: 0 },
-  label: { marginTop: 4, color: CoachColors.textSecondary, fontFamily: 'monospace', fontSize: 10 },
+  label: { ...CoachTypography.inter600, marginTop: 4, color: CoachColors.textSecondary, fontSize: 10 },
   input: {
+    ...CoachTypography.inter400,
     height: 48,
     paddingHorizontal: 14,
     borderWidth: 1,
@@ -167,12 +169,12 @@ const styles = StyleSheet.create({
   } as never,
   infoPanel: { padding: 22, gap: 12 },
   successPanel: { padding: 22, gap: 9, borderColor: CoachColors.accentText },
-  successTitle: { color: CoachColors.accentText, fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-  coachName: { color: CoachColors.textPrimary, fontSize: 19, fontWeight: '800' },
-  muted: { color: CoachColors.textSecondary, fontSize: 12 },
+  successTitle: { ...CoachTypography.inter600, color: CoachColors.accentText, fontSize: 12, textTransform: 'uppercase' },
+  coachName: { ...CoachTypography.sora700, color: CoachColors.textPrimary, fontSize: 19, letterSpacing: -0.38 },
+  muted: { ...CoachTypography.inter400, color: CoachColors.textSecondary, fontSize: 12 },
   passwordBox: { marginTop: 6, padding: 14, gap: 7, borderWidth: 1, borderColor: CoachColors.accentText, borderRadius: 6, backgroundColor: CoachColors.accentTint },
-  passwordLabel: { color: CoachColors.accentText, fontFamily: 'monospace', fontSize: 9, fontWeight: '800' },
-  password: { color: CoachColors.textPrimary, fontFamily: 'monospace', fontSize: 15, fontWeight: '700' },
-  instructions: { color: CoachColors.textSecondary, fontSize: 12, lineHeight: 19 },
-  error: { color: CoachColors.danger, fontSize: 12, lineHeight: 18 },
+  passwordLabel: { ...CoachTypography.inter600, color: CoachColors.accentText, fontSize: 9 },
+  password: { ...CoachTypography.inter600, color: CoachColors.textPrimary, fontSize: 15 },
+  instructions: { ...CoachTypography.inter400, color: CoachColors.textSecondary, fontSize: 12, lineHeight: 19 },
+  error: { ...CoachTypography.inter400, color: CoachColors.danger, fontSize: 12, lineHeight: 18 },
 });

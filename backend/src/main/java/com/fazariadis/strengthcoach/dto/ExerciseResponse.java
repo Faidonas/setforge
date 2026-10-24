@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Schema(description = "An exercise in the SetForge catalogue")
+@Schema(description = "An exercise in the Spotter catalogue")
 @Data
 @Builder
 @NoArgsConstructor

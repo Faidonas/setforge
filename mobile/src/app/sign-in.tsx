@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SpotterLogo } from '@/components/spotter-logo';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { useAuth } from '@/features/auth/auth-context';
 
@@ -58,7 +59,7 @@ export default function SignInScreen() {
           contentContainerStyle={styles.screen}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={styles.brand}><Text style={styles.logo}>FORGE</Text><Text style={styles.tagline}>PLAN. PERFORM. PROGRESS.</Text></View>
+          <View style={styles.brand}><SpotterLogo width={232} /><Text style={styles.tagline}>PLAN. PERFORM. PROGRESS.</Text></View>
           <View style={styles.card}>
           <Text style={styles.title}>{mode === 'signIn' ? 'Welcome back' : 'Create your account'}</Text>
           <Text style={styles.subtitle}>{mode === 'signIn' ? 'Sign in to access your workouts and templates.' : 'Create an account to start tracking your training.'}</Text>
@@ -77,7 +78,7 @@ export default function SignInScreen() {
           </View>
           <View style={styles.divider}><View style={styles.line} /><Text style={styles.or}>OR</Text><View style={styles.line} /></View>
           <Pressable disabled={busy || !auth.configured} onPress={() => void run(auth.signInWithGoogle)} style={({ pressed }) => [styles.google, pressed && styles.pressed]}><Text style={styles.googleText}>CONTINUE WITH GOOGLE</Text></Pressable>
-          <Text style={styles.invite}>Google can also create your SetForge account the first time you continue.</Text>
+          <Text style={styles.invite}>Google can also create your Spotter account the first time you continue.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -87,7 +88,7 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   safeArea:{flex:1,backgroundColor:SetForgeColors.canvas},keyboardArea:{flex:1},screen:{flexGrow:1,width:'100%',maxWidth:440,alignSelf:'center',justifyContent:'center',padding:24,gap:42},
-  brand:{alignItems:'center',gap:7},logo:{color:SetForgeColors.textPrimary,fontSize:38,fontWeight:'900',letterSpacing:-1.2},tagline:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:12,letterSpacing:.35},
+  brand:{alignItems:'center',gap:12},tagline:{color:SetForgeColors.accent,fontFamily:'monospace',fontSize:12,letterSpacing:.35},
   card:{gap:14,padding:22,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:14,backgroundColor:SetForgeColors.surface},title:{color:SetForgeColors.textPrimary,fontSize:25,fontWeight:'900'},subtitle:{marginBottom:5,color:SetForgeColors.textSecondary,fontSize:13,lineHeight:19},
   input:{height:50,paddingHorizontal:14,borderWidth:1,borderColor:SetForgeColors.border,borderRadius:7,backgroundColor:SetForgeColors.surfaceMuted,color:SetForgeColors.textPrimary,fontSize:15,outlineStyle:'none'} as never,
   primary:{height:50,alignItems:'center',justifyContent:'center',borderRadius:7,backgroundColor:SetForgeColors.accent},primaryText:{color:SetForgeColors.canvas,fontSize:14,fontWeight:'900'},google:{height:48,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:SetForgeColors.border,borderRadius:7},googleText:{color:SetForgeColors.textPrimary,fontSize:13,fontWeight:'800'},pressed:{opacity:.7},

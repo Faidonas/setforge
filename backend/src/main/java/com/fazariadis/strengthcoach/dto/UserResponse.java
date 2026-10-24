@@ -12,7 +12,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Schema(description = "A SetForge user profile")
+@Schema(description = "A Spotter user profile")
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,10 +22,10 @@ public class UserResponse {
 	@Schema(description = "User identifier", example = "1")
 	private Long id;
 
-	@Schema(description = "Email address", example = "alex.trainer@setforge.dev")
+	@Schema(description = "Email address", example = "alex.trainer@spotterapp.gr")
 	private String email;
 
-	@Schema(description = "Name displayed in SetForge", example = "Alex Trainer")
+	@Schema(description = "Name displayed in Spotter", example = "Alex Trainer")
 	private String displayName;
 
 	@Schema(description = "User role", example = "PERSONAL_TRAINER")

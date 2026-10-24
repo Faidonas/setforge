@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,12 +11,13 @@ import {
 
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { canAccessCoachDashboard } from '@/constants/coach-access';
 import { useAuth } from '@/features/auth/auth-context';
+import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 import type { UserProfile } from '@/models/user';
 import { getUserProfile } from '@/services/user-api';
 import { getWorkoutHistory } from '@/services/workout-session-api';
@@ -55,6 +56,7 @@ async function fetchProfileData(): Promise<ProfileData> {
 
 export default function ProfileScreen() {
   const auth = useAuth();
+  const activeWorkout = useActiveWorkout();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,25 +117,11 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let current = true;
-    fetchProfileData()
-      .then((data) => {
-        if (current) setProfile(data);
-      })
-      .catch((loadError: unknown) => {
-        if (current) {
-          setError(loadError instanceof Error ? loadError.message : 'Could not load your profile.');
-        }
-      })
-      .finally(() => {
-        if (current) setIsLoading(false);
-      });
-
-    return () => {
-      current = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (activeWorkout.dataRevision >= 0) void loadProfile();
+    }, [activeWorkout.dataRevision, loadProfile]),
+  );
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
@@ -141,7 +129,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Profile</Text>
-            <Text style={styles.subtitle}>Your SetForge account and training overview</Text>
+            <Text style={styles.subtitle}>Your Spotter account and training overview</Text>
           </View>
           <Pressable
             accessibilityRole="button"

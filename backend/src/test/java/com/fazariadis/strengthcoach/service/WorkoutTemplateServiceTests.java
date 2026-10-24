@@ -186,6 +186,97 @@ class WorkoutTemplateServiceTests {
 	}
 
 	@Test
+	void duplicatesTemplatePlanAsANewUnassignedCopy() {
+		User owner = User.builder().id(1L).build();
+		Exercise squat = Exercise.builder()
+				.id(10L)
+				.name("Back Squat")
+				.primaryMuscle("Quadriceps")
+				.equipment("Barbell")
+				.exerciseType(ExerciseType.WEIGHT_AND_REPS)
+				.build();
+		WorkoutTemplate source = WorkoutTemplate.builder()
+				.id(50L)
+				.owner(owner)
+				.name("Upper A")
+				.description("Strength block")
+				.position(0)
+				.build();
+		WorkoutTemplateExercise sourceExercise = WorkoutTemplateExercise.builder()
+				.id(100L)
+				.workoutTemplate(source)
+				.exercise(squat)
+				.position(0)
+				.notes("Controlled eccentric")
+				.build();
+		WorkoutTemplateSet sourceSet = WorkoutTemplateSet.builder()
+				.id(200L)
+				.templateExercise(sourceExercise)
+				.position(0)
+				.setType(SetType.NORMAL)
+				.targetReps(8)
+				.targetWeight(new BigDecimal("80.00"))
+				.restSeconds(120)
+				.build();
+		List<WorkoutTemplateExercise> copiedExercises = new ArrayList<>();
+		List<WorkoutTemplateSet> copiedSets = new ArrayList<>();
+
+		when(templateRepository.findById(50L)).thenReturn(Optional.of(source));
+		when(templateRepository.existsByOwner_IdAndNameIgnoreCase(1L, "Upper A Copy"))
+				.thenReturn(true);
+		when(templateRepository.existsByOwner_IdAndNameIgnoreCase(1L, "Upper A Copy 2"))
+				.thenReturn(false);
+		when(templateRepository.findAllByOwner_IdOrderByPositionAscUpdatedAtDesc(1L))
+				.thenReturn(List.of(source));
+		when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+		when(exerciseRepository.findAllById(org.mockito.ArgumentMatchers.<Iterable<Long>>any()))
+				.thenReturn(List.of(squat));
+		when(templateRepository.saveAndFlush(any(WorkoutTemplate.class))).thenAnswer(invocation -> {
+			WorkoutTemplate copy = invocation.getArgument(0);
+			copy.setId(51L);
+			return copy;
+		});
+		when(templateExerciseRepository.findAllByWorkoutTemplate_IdOrderByPositionAsc(50L))
+				.thenReturn(List.of(sourceExercise));
+		when(templateExerciseRepository.findAllByWorkoutTemplate_IdOrderByPositionAsc(51L))
+				.thenAnswer(invocation -> copiedExercises);
+		when(templateSetRepository.findAllByTemplateExercise_IdInOrderByTemplateExercise_IdAscPositionAsc(
+				List.of(100L))).thenReturn(List.of(sourceSet));
+		when(templateExerciseRepository.save(any(WorkoutTemplateExercise.class))).thenAnswer(invocation -> {
+			WorkoutTemplateExercise copy = invocation.getArgument(0);
+			copy.setId(101L);
+			copiedExercises.add(copy);
+			return copy;
+		});
+		when(templateSetRepository.saveAll(
+				org.mockito.ArgumentMatchers.<Iterable<WorkoutTemplateSet>>any())).thenAnswer(invocation -> {
+			Iterable<WorkoutTemplateSet> sets = invocation.getArgument(0);
+			sets.forEach(set -> {
+				set.setId(201L);
+				copiedSets.add(set);
+			});
+			return copiedSets;
+		});
+		when(templateSetRepository.findAllByTemplateExercise_IdInOrderByTemplateExercise_IdAscPositionAsc(
+				List.of(101L))).thenAnswer(invocation -> copiedSets);
+
+		WorkoutTemplateResponse response = service.duplicateUnassigned(50L, 1L);
+
+		assertThat(response.getId()).isEqualTo(51L);
+		assertThat(response.getName()).isEqualTo("Upper A Copy 2");
+		assertThat(response.getDescription()).isEqualTo("Strength block");
+		assertThat(response.getExercises()).singleElement().satisfies(exercise -> {
+			assertThat(exercise.getNotes()).isEqualTo("Controlled eccentric");
+			assertThat(exercise.getSets()).singleElement().satisfies(set -> {
+				assertThat(set.getTargetReps()).isEqualTo(8);
+				assertThat(set.getTargetWeight()).isEqualByComparingTo("80.00");
+				assertThat(set.getRestSeconds()).isEqualTo(120);
+			});
+		});
+		verify(templateAssignmentRepository, never()).saveAndFlush(any(WorkoutTemplateAssignment.class));
+	}
+
+	@Test
 	void rejectsMissingExerciseBeforeSavingTemplate() {
 		when(userRepository.findById(1L)).thenReturn(Optional.of(User.builder().id(1L).build()));
 		when(exerciseRepository.findAllById(org.mockito.ArgumentMatchers.<Iterable<Long>>any()))

@@ -1,0 +1,57 @@
+{
+  "source": "../../brand/spotter-approved-board.png",
+  "approvedConcept": "01-single-lifter",
+  "colors": {
+    "cyan": "#00F0FF",
+    "dark": "#09090B",
+    "white": "#FFFFFF"
+  },
+  "logo": {
+    "width": 1038,
+    "height": 210,
+    "aspectRatio": 4.942857142857143
+  },
+  "mark": {
+    "width": 352,
+    "height": 210,
+    "aspectRatio": 1.6761904761904762
+  },
+  "assets": {
+    "logo-dark.png": {
+      "width": 1038,
+      "height": 210
+    },
+    "logo-light.png": {
+      "width": 1038,
+      "height": 210
+    },
+    "mark-dark.png": {
+      "width": 352,
+      "height": 210
+    },
+    "mark-light.png": {
+      "width": 352,
+      "height": 210
+    },
+    "app-icon.png": {
+      "width": 1024,
+      "height": 1024
+    },
+    "adaptive-foreground.png": {
+      "width": 1024,
+      "height": 1024
+    },
+    "adaptive-monochrome.png": {
+      "width": 1024,
+      "height": 1024
+    },
+    "splash.png": {
+      "width": 512,
+      "height": 512
+    },
+    "favicon.png": {
+      "width": 128,
+      "height": 128
+    }
+  }
+}

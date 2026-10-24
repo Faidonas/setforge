@@ -70,6 +70,18 @@ public class CoachDashboardController {
 				.body(response);
 	}
 
+	@PostMapping("/templates/{templateId}/duplicate")
+	@Operation(summary = "Duplicate a workout template in the trainer's library")
+	public org.springframework.http.ResponseEntity<WorkoutTemplateResponse> duplicateTemplate(
+			@PathVariable Long templateId,
+			@AuthenticationPrincipal Jwt jwt) {
+		WorkoutTemplateResponse response = coachDashboardService.duplicateTemplate(
+				authenticatedUserService.resolve(jwt), templateId);
+		return org.springframework.http.ResponseEntity
+				.created(URI.create("/api/workout-templates/" + response.getId()))
+				.body(response);
+	}
+
 	@PostMapping("/templates/{templateId}/assignments/{userId}")
 	@Operation(summary = "Assign a library template to the trainer or an active client")
 	public org.springframework.http.ResponseEntity<Void> assignTemplate(

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SpotterLogo } from '@/components/spotter-logo';
 import { SetForgeColors } from '@/constants/setforge-theme';
 import { useActiveWorkout } from '@/features/workouts/active-workout/active-workout-context';
 import type { UserProfile } from '@/models/user';
@@ -61,8 +62,8 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadHome();
-    }, [loadHome]),
+      if (activeWorkout.dataRevision >= 0) void loadHome();
+    }, [activeWorkout.dataRevision, loadHome]),
   );
 
   const recommendedTemplate = data?.templates[0];
@@ -131,6 +132,7 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}>
         <View style={styles.greetingHeader}>
+          <SpotterLogo width={42} markOnly style={{ marginRight: 12 }} />
           <View style={styles.greetingCopy}>
             <Text numberOfLines={1} style={styles.greeting}>
               {getGreeting()}, {firstName(data.profile.displayName)}

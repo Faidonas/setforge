@@ -1,3 +1,10 @@
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
+import { Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
+import { useFonts } from 'expo-font';
 import { Image } from 'expo-image';
 import { usePathname, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -10,17 +17,20 @@ import {
   type StyleProp,
   StyleSheet,
   Text,
+  type TextStyle,
   useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native';
 
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
+import { SpotterLogo } from '@/components/spotter-logo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CoachColors } from '@/constants/setforge-theme';
 import { useAuth } from '@/features/auth/auth-context';
 import { type CoachThemeMode, useCoachTheme } from '@/features/coach/coach-theme';
+import { CoachTypography } from '@/features/coach/coach-typography';
 
 const icons = {
   overview: require('@/assets/images/coach-web-light/layout-dashboard.svg'),
@@ -35,11 +45,13 @@ const icons = {
   chevronDown: require('@/assets/images/coach-web-light/chevron-down.svg'),
 };
 
-type NavItem = { label: string; href: '/coach' | '/coach/clients' | '/coach/templates' | '/coach/exercises' | '/coach/settings'; icon: keyof typeof icons };
+type CoachNavHref = '/coach' | '/coach/clients' | '/coach/templates' | '/coach/workout-builder' | '/coach/exercises' | '/coach/settings';
+type NavItem = { label: string; shortLabel?: string; href: CoachNavHref; icon: keyof typeof icons };
 const navItems: NavItem[] = [
   { label: 'Overview', href: '/coach', icon: 'overview' },
   { label: 'Clients', href: '/coach/clients', icon: 'clients' },
   { label: 'Templates', href: '/coach/templates', icon: 'templates' },
+  { label: 'Workout builder', shortLabel: 'Builder', href: '/coach/workout-builder', icon: 'training' },
   { label: 'Exercises', href: '/coach/exercises', icon: 'exercises' },
   { label: 'Settings', href: '/coach/settings', icon: 'settings' },
 ];
@@ -49,15 +61,22 @@ const themeOptions: { label: string; mode: CoachThemeMode }[] = [
   { label: 'Light', mode: 'light' },
 ];
 
-const COACH_SIDEBAR_BREAKPOINT = 900;
-const COACH_COMPACT_BREAKPOINT = 700;
+const COACH_SIDEBAR_WIDTH = 252;
+const COACH_SIDEBAR_BREAKPOINT = 1120;
+const COACH_COMPACT_BREAKPOINT = 820;
+const COACH_NARROW_BREAKPOINT = 520;
 
 export function useCoachLayout() {
   const { width } = useWindowDimensions();
+  const isSidebarCollapsed = width < COACH_SIDEBAR_BREAKPOINT;
+  const contentWidth = Math.max(0, width - (isSidebarCollapsed ? 0 : COACH_SIDEBAR_WIDTH));
+
   return {
     width,
-    isCompact: width < COACH_COMPACT_BREAKPOINT,
-    isSidebarCollapsed: width < COACH_SIDEBAR_BREAKPOINT,
+    contentWidth,
+    isCompact: contentWidth < COACH_COMPACT_BREAKPOINT,
+    isNarrow: contentWidth < COACH_NARROW_BREAKPOINT,
+    isSidebarCollapsed,
   };
 }
 
@@ -102,6 +121,13 @@ export function HoverPressable({
 }
 
 export function CoachShell({ children }: PropsWithChildren) {
+  useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Sora_600SemiBold,
+    Sora_700Bold,
+  });
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
@@ -113,7 +139,7 @@ export function CoachShell({ children }: PropsWithChildren) {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const crumbs = pathname.split('/').filter(Boolean).slice(1);
   const current = crumbs.length ? crumbs.map((part) => part.replace(/-/g, ' ')).join(' / ') : 'Command center';
-  const email = auth.user?.email ?? 'SetForge account';
+  const email = auth.user?.email ?? 'Spotter account';
   const displayName = resolveDisplayName(auth.user?.user_metadata?.full_name, email);
   const initials = getInitials(displayName);
 
@@ -168,7 +194,7 @@ export function CoachShell({ children }: PropsWithChildren) {
               horizontal && styles.navLabelHorizontal,
               selected && styles.navLabelSelected,
             ]}>
-            {item.label}
+            {horizontal ? item.shortLabel ?? item.label : item.label}
           </Text>
         </HoverPressable>
       );
@@ -182,15 +208,15 @@ export function CoachShell({ children }: PropsWithChildren) {
     <View style={[styles.shell, isSidebarCollapsed && styles.shellCompact]}>
       {!isSidebarCollapsed ? <View style={styles.sidebar}>
         <View>
-          <View style={styles.brand}><View style={styles.brandMark} /><Text style={styles.brandText}>SETFORGE</Text></View>
-          <View style={styles.workspace}><Text style={styles.workspaceName}>Coach workspace</Text><Text style={styles.eyebrow}>SETFORGE TRAINER</Text></View>
+          <View style={styles.brand}><SpotterLogo appearance={mode} width={196} /></View>
+          <View style={styles.workspace}><Text style={styles.workspaceName}>Coach workspace</Text><Text style={styles.eyebrow}>SPOTTER TRAINER</Text></View>
           <View style={styles.nav}>{renderNavigation()}</View>
         </View>
         <View style={styles.sidebarFooter}>
           <View style={styles.divider} />
           <Text style={styles.eyebrow}>LIVE BACKEND DATA</Text>
           <View style={styles.helpRow}><Image source={icons.help} style={styles.smallIcon} contentFit="contain" tintColor={CoachColors.textSecondary} /><Text style={styles.footerLink}>Help & resources</Text></View>
-          <Text style={styles.eyebrow}>SETFORGE / v1.0</Text>
+          <Text style={styles.eyebrow}>SPOTTER / v1.0</Text>
         </View>
       </View> : null}
       <View style={styles.workspaceArea}>
@@ -200,7 +226,7 @@ export function CoachShell({ children }: PropsWithChildren) {
             isSidebarCollapsed && styles.topbarCompact,
             isSidebarCollapsed && { height: 58 + safeAreaInsets.top, paddingTop: safeAreaInsets.top },
           ]}>
-          {isSidebarCollapsed ? <View style={styles.mobileBrand}><View style={styles.brandMark} /><Text style={styles.mobileBrandText}>SETFORGE</Text></View> : null}
+          {isSidebarCollapsed ? <View style={styles.mobileBrand}><SpotterLogo appearance={mode} width={144} /></View> : null}
           {isSidebarCollapsed
             ? !isCompact && <Text numberOfLines={1} style={styles.mobileCurrent}>{current}</Text>
             : <View style={styles.breadcrumb}><Text style={styles.breadcrumbMuted}>Coach workspace</Text><Text style={styles.breadcrumbSep}>›</Text><Text numberOfLines={1} style={styles.breadcrumbCurrent}>{current}</Text></View>}
@@ -313,29 +339,29 @@ export function PageHeading({ title, subtitle, actions }: { title: string; subti
   return <View style={[styles.pageHeading, isCompact && styles.pageHeadingCompact]}><View style={styles.headingCopy}><Text style={[styles.pageTitle, isCompact && styles.pageTitleCompact]}>{title}</Text><Text style={styles.pageSubtitle}>{subtitle}</Text></View>{actions ? <View style={[styles.headingActions, isCompact && styles.headingActionsCompact]}>{actions}</View> : null}</View>;
 }
 
-export function ActionButton({ label, secondary = false, onPress }: { label: string; secondary?: boolean; onPress?: () => void }) {
+export function ActionButton({ label, secondary = false, onPress, textStyle }: { label: string; secondary?: boolean; onPress?: () => void; textStyle?: StyleProp<TextStyle> }) {
   const [hovered, setHovered] = useState(false);
-  return <Pressable accessibilityRole="button" onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)} onPress={onPress} style={({ pressed }) => [styles.actionButton, secondary && styles.actionButtonSecondary, hovered && styles.actionButtonHovered, hovered && secondary && styles.actionButtonSecondaryHovered, pressed && styles.actionButtonPressed]}><Text style={[styles.actionText, secondary && styles.actionTextSecondary]}>{label.toUpperCase()}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)} onPress={onPress} style={({ pressed }) => [styles.actionButton, secondary && styles.actionButtonSecondary, hovered && styles.actionButtonHovered, hovered && secondary && styles.actionButtonSecondaryHovered, pressed && styles.actionButtonPressed]}><Text style={[styles.actionText, secondary && styles.actionTextSecondary, textStyle]}>{label.toUpperCase()}</Text></Pressable>;
 }
 
 export function Panel({ children, style }: PropsWithChildren<{ style?: object }>) {
   return <View style={[styles.panel, style]}>{children}</View>;
 }
 
-export function StatusBadge({ children, tone = 'accent' }: PropsWithChildren<{ tone?: 'accent' | 'warning' | 'danger' | 'muted' }>) {
+export function StatusBadge({ children, tone = 'accent', textStyle: customTextStyle }: PropsWithChildren<{ tone?: 'accent' | 'warning' | 'danger' | 'muted'; textStyle?: StyleProp<TextStyle> }>) {
   const toneStyle = tone === 'warning' ? styles.badgeWarning : tone === 'danger' ? styles.badgeDanger : tone === 'muted' ? styles.badgeMuted : styles.badgeAccent;
   const textStyle = tone === 'warning' ? styles.badgeWarningText : tone === 'danger' ? styles.badgeDangerText : tone === 'muted' ? styles.badgeMutedText : styles.badgeAccentText;
-  return <View style={[styles.badge, toneStyle]}><Text style={[styles.badgeText, textStyle]}>{children}</Text></View>;
+  return <View style={[styles.badge, toneStyle]}><Text style={[styles.badgeText, textStyle, customTextStyle]}>{children}</Text></View>;
 }
 
 export const coachStyles = StyleSheet.create({
-  page: { width: '100%', maxWidth: 1440, alignSelf: 'flex-start', padding: 32, gap: 26 },
+  page: { width: '100%', maxWidth: 1440, alignSelf: 'center', padding: 32, gap: 26 },
   pageCompact: { padding: 16, gap: 18 },
   row: { flexDirection: 'row', gap: 16 },
-  sectionLabel: { color: CoachColors.textPrimary, fontSize: 11, fontWeight: '800', letterSpacing: .3, textTransform: 'uppercase' },
-  sectionTitle: { color: CoachColors.textPrimary, fontSize: 17, lineHeight: 22, fontWeight: '800' },
-  muted: { color: CoachColors.textSecondary, fontSize: 12, lineHeight: 18 },
-  mono: { fontFamily: 'monospace' },
+  sectionLabel: { color: CoachColors.textPrimary, fontSize: 11, letterSpacing: .3, textTransform: 'uppercase', ...CoachTypography.inter600 },
+  sectionTitle: { color: CoachColors.textPrimary, fontSize: 17, lineHeight: 22, letterSpacing: -0.34, ...CoachTypography.sora600 },
+  muted: { color: CoachColors.textSecondary, fontSize: 12, lineHeight: 18, ...CoachTypography.inter400 },
+  mono: { ...CoachTypography.inter500 },
 });
 
 const styles = StyleSheet.create({
@@ -345,16 +371,13 @@ const styles = StyleSheet.create({
   interactiveDisabled: { cursor: 'default' } as never,
   shell: { flex: 1, minHeight: '100%', flexDirection: 'row', backgroundColor: CoachColors.canvas },
   shellCompact: { flexDirection: 'column' },
-  sidebar: { width: 252, minHeight: '100%', paddingHorizontal: 18, paddingVertical: 26, justifyContent: 'space-between', borderRightWidth: 1, borderRightColor: CoachColors.border, backgroundColor: CoachColors.surface },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 },
-  brandMark: { width: 26, height: 26, borderRadius: 7, backgroundColor: CoachColors.accent },
-  brandText: { color: CoachColors.textPrimary, fontSize: 23, fontWeight: '900', letterSpacing: -.8 },
-  mobileBrand: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  mobileBrandText: { color: CoachColors.textPrimary, fontSize: 16, fontWeight: '900', letterSpacing: -.5 },
-  mobileCurrent: { flex: 1, marginHorizontal: 12, color: CoachColors.textSecondary, fontSize: 10, textAlign: 'center', textTransform: 'capitalize' },
+  sidebar: { width: COACH_SIDEBAR_WIDTH, minHeight: '100%', paddingHorizontal: 18, paddingVertical: 26, justifyContent: 'space-between', borderRightWidth: 1, borderRightColor: CoachColors.border, backgroundColor: CoachColors.surface },
+  brand: { padding: 8 },
+  mobileBrand: { flexShrink: 0 },
+  mobileCurrent: { flex: 1, marginHorizontal: 12, color: CoachColors.textSecondary, fontSize: 10, textAlign: 'center', textTransform: 'capitalize', ...CoachTypography.inter500 },
   workspace: { marginTop: 32, padding: 16, gap: 4, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 10, backgroundColor: CoachColors.surfaceMuted },
-  workspaceName: { color: CoachColors.textPrimary, fontSize: 14, fontWeight: '700' },
-  eyebrow: { color: CoachColors.textSecondary, fontSize: 10, lineHeight: 15, fontFamily: 'monospace' },
+  workspaceName: { color: CoachColors.textPrimary, fontSize: 14, letterSpacing: -.28, ...CoachTypography.sora600 },
+  eyebrow: { color: CoachColors.textSecondary, fontSize: 10, lineHeight: 15, ...CoachTypography.inter500 },
   nav: { marginTop: 32, gap: 8 },
   navItem: { height: 46, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 9 },
   navItemHorizontal: { position: 'relative', flex: 1, height: 58, paddingHorizontal: 2, paddingVertical: 7, flexDirection: 'column', justifyContent: 'center', gap: 3, borderRadius: 0 },
@@ -363,70 +386,70 @@ const styles = StyleSheet.create({
   navItemSelected: { backgroundColor: CoachColors.accentTint },
   navItemHovered: { backgroundColor: CoachColors.accentTint, transform: [{ translateX: 3 }] },
   navIcon: { width: 18, height: 18 },
-  navLabel: { color: CoachColors.textSecondary, fontSize: 14 },
+  navLabel: { color: CoachColors.textSecondary, fontSize: 14, ...CoachTypography.inter400 },
   navLabelHorizontal: { maxWidth: '100%', fontSize: 9, lineHeight: 11, textAlign: 'center' },
-  navLabelSelected: { color: CoachColors.accentText, fontWeight: '700' },
+  navLabelSelected: { color: CoachColors.accentText, ...CoachTypography.inter600 },
   sidebarFooter: { gap: 16, padding: 8 },
   divider: { height: 1, backgroundColor: CoachColors.border },
   helpRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  footerLink: { color: CoachColors.textSecondary, fontSize: 12 },
+  footerLink: { color: CoachColors.textSecondary, fontSize: 12, ...CoachTypography.inter400 },
   smallIcon: { width: 18, height: 18 },
   workspaceArea: { flex: 1, minWidth: 0, minHeight: 0 },
   topbar: { height: 76, paddingHorizontal: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: CoachColors.border, backgroundColor: CoachColors.surface },
   topbarCompact: { height: 58, paddingHorizontal: 16 },
   breadcrumb: { minWidth: 180, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  breadcrumbMuted: { color: CoachColors.textSecondary, fontSize: 12 },
-  breadcrumbSep: { color: CoachColors.textDisabled, fontSize: 16 },
-  breadcrumbCurrent: { color: CoachColors.textPrimary, fontSize: 12, textTransform: 'capitalize' },
+  breadcrumbMuted: { color: CoachColors.textSecondary, fontSize: 12, ...CoachTypography.inter400 },
+  breadcrumbSep: { color: CoachColors.textDisabled, fontSize: 16, ...CoachTypography.inter400 },
+  breadcrumbCurrent: { color: CoachColors.textPrimary, fontSize: 12, textTransform: 'capitalize', ...CoachTypography.inter500 },
   topActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   search: { width: 280, height: 42, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 9, backgroundColor: CoachColors.surfaceMuted },
-  searchInput: { flex: 1, color: CoachColors.textPrimary, fontSize: 14, outlineStyle: 'none' } as never,
+  searchInput: { flex: 1, color: CoachColors.textPrimary, fontSize: 14, outlineStyle: 'none', ...CoachTypography.inter400 } as never,
   bellWrap: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   unread: { position: 'absolute', right: 3, top: 3, width: 5, height: 5, borderRadius: 3, backgroundColor: CoachColors.accent },
   accountTrigger: { minWidth: 44, height: 42, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 9, borderRadius: 9 },
   accountTriggerHovered: { backgroundColor: CoachColors.surfaceMuted, transform: [{ translateY: -1 }] },
   avatar: { width: 34, height: 34, borderRadius: 999, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: CoachColors.border, backgroundColor: CoachColors.surfaceMuted },
-  avatarText: { color: CoachColors.textPrimary, fontSize: 11, fontFamily: 'monospace' },
-  coachName: { maxWidth: 130, color: CoachColors.textPrimary, fontSize: 12, fontWeight: '700' },
+  avatarText: { color: CoachColors.textPrimary, fontSize: 11, ...CoachTypography.inter600 },
+  coachName: { maxWidth: 130, color: CoachColors.textPrimary, fontSize: 12, ...CoachTypography.inter600 },
   chevronIcon: { width: 14, height: 14 },
   accountMenuLayer: { position: 'absolute', zIndex: 100, top: 0, right: 0, bottom: 0, left: 0 },
   accountMenu: { position: 'absolute', top: 68, right: 24, width: 292, paddingVertical: 8, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 12, backgroundColor: CoachColors.surface, boxShadow: '0 14px 34px rgba(0, 0, 0, 0.22)' },
-  accountMenuCompact: { right: 10, width: 280 },
+  accountMenuCompact: { right: 10, left: 10, width: 'auto' },
   menuIdentity: { minHeight: 62, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
   menuAvatar: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 18, borderWidth: 1, borderColor: CoachColors.border, backgroundColor: CoachColors.surfaceMuted },
-  menuAvatarText: { color: CoachColors.textPrimary, fontFamily: 'monospace', fontSize: 11, fontWeight: '700' },
+  menuAvatarText: { color: CoachColors.textPrimary, fontSize: 11, ...CoachTypography.inter600 },
   menuIdentityCopy: { flex: 1, minWidth: 0 },
-  menuName: { color: CoachColors.textPrimary, fontSize: 12, fontWeight: '800' },
-  menuEmail: { marginTop: 3, color: CoachColors.textSecondary, fontSize: 10 },
+  menuName: { color: CoachColors.textPrimary, fontSize: 12, ...CoachTypography.inter600 },
+  menuEmail: { marginTop: 3, color: CoachColors.textSecondary, fontSize: 10, ...CoachTypography.inter400 },
   menuDivider: { height: 1, marginVertical: 6, backgroundColor: CoachColors.border },
   menuItem: { minHeight: 42, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
   menuItemPressed: { backgroundColor: CoachColors.surfaceMuted, opacity: 0.82 },
   menuItemHovered: { paddingLeft: 18, backgroundColor: CoachColors.accentTint },
   menuItemIcon: { width: 17, height: 17 },
-  menuItemLabel: { color: CoachColors.textPrimary, fontSize: 12 },
-  menuSectionLabel: { paddingHorizontal: 15, paddingTop: 5, paddingBottom: 4, color: CoachColors.textSecondary, fontFamily: 'monospace', fontSize: 9, fontWeight: '700' },
+  menuItemLabel: { color: CoachColors.textPrimary, fontSize: 12, ...CoachTypography.inter400 },
+  menuSectionLabel: { paddingHorizontal: 15, paddingTop: 5, paddingBottom: 4, color: CoachColors.textSecondary, fontSize: 9, ...CoachTypography.inter600 },
   themeOptions: { paddingBottom: 3 },
   themeOption: { minHeight: 36, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 12 },
   themeOptionHovered: { backgroundColor: CoachColors.surfaceMuted },
   themeDot: { width: 8, height: 8, marginHorizontal: 4, borderRadius: 4, borderWidth: 1, borderColor: CoachColors.textDisabled },
   themeDotSelected: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentText },
-  themeLabel: { color: CoachColors.textSecondary, fontSize: 12 },
-  themeLabelSelected: { color: CoachColors.textPrimary, fontWeight: '700' },
-  signOutError: { paddingHorizontal: 15, paddingVertical: 5, color: CoachColors.danger, fontSize: 10 },
+  themeLabel: { color: CoachColors.textSecondary, fontSize: 12, ...CoachTypography.inter400 },
+  themeLabelSelected: { color: CoachColors.textPrimary, ...CoachTypography.inter600 },
+  signOutError: { paddingHorizontal: 15, paddingVertical: 5, color: CoachColors.danger, fontSize: 10, ...CoachTypography.inter400 },
   signOutMenuItem: { minHeight: 42, paddingHorizontal: 15, justifyContent: 'center' },
   signOutMenuItemHovered: { paddingLeft: 18, backgroundColor: 'rgba(185, 28, 28, 0.08)' },
-  signOutMenuLabel: { color: CoachColors.danger, fontSize: 12, fontWeight: '700' },
+  signOutMenuLabel: { color: CoachColors.danger, fontSize: 12, ...CoachTypography.inter600 },
   mobileNavigation: { height: 58, borderTopWidth: 1, borderTopColor: CoachColors.border, backgroundColor: CoachColors.surface },
   mobileNavigationContent: { flex: 1, flexDirection: 'row', alignItems: 'stretch' },
-  contentScroll: { flex: 1 },
-  scrollContent: { minWidth: 980 },
+  contentScroll: { flex: 1, minWidth: 0 },
+  scrollContent: { width: '100%', minWidth: 0, flexGrow: 1, alignItems: 'stretch' },
   scrollContentCompact: { minWidth: 0 },
   pageHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pageHeadingCompact: { alignItems: 'stretch', flexDirection: 'column', gap: 16 },
-  headingCopy: { gap: 8 },
-  pageTitle: { color: CoachColors.textPrimary, fontSize: 32, lineHeight: 40, fontWeight: '900', letterSpacing: -.8 },
-  pageTitleCompact: { fontSize: 26, lineHeight: 32 },
-  pageSubtitle: { color: CoachColors.textSecondary, fontSize: 13, lineHeight: 20 },
+  headingCopy: { flex: 1, minWidth: 0, gap: 8 },
+  pageTitle: { color: CoachColors.textPrimary, fontSize: 32, lineHeight: 40, letterSpacing: -.64, ...CoachTypography.sora700 },
+  pageTitleCompact: { fontSize: 26, lineHeight: 32, letterSpacing: -.52 },
+  pageSubtitle: { color: CoachColors.textSecondary, fontSize: 13, lineHeight: 20, ...CoachTypography.inter400 },
   headingActions: { flexDirection: 'row', gap: 8 },
   headingActionsCompact: { flexWrap: 'wrap' },
   actionButton: { height: 44, minWidth: 160, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: CoachColors.accent, cursor: 'pointer', transitionDuration: '160ms', transitionProperty: 'transform, box-shadow, background-color, border-color', transitionTimingFunction: 'ease-out' } as never,
@@ -434,7 +457,7 @@ const styles = StyleSheet.create({
   actionButtonHovered: { transform: [{ translateY: -2 }], boxShadow: '0 9px 22px rgba(0, 185, 198, 0.18)' },
   actionButtonSecondaryHovered: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.accentTint, boxShadow: '0 8px 18px rgba(0, 0, 0, 0.08)' },
   actionButtonPressed: { opacity: .78, transform: [{ translateY: 0 }], boxShadow: 'none' },
-  actionText: { color: CoachColors.buttonText, fontSize: 11, fontWeight: '900', letterSpacing: .3 },
+  actionText: { color: CoachColors.buttonText, fontSize: 11, letterSpacing: .3, ...CoachTypography.inter600 },
   actionTextSecondary: { color: CoachColors.accentText },
   pressed: { opacity: .72 },
   panel: { borderWidth: 1, borderColor: CoachColors.border, borderRadius: 12, backgroundColor: CoachColors.surface, boxShadow: '0 4px 14px rgba(0, 0, 0, 0.04)' },
@@ -443,7 +466,7 @@ const styles = StyleSheet.create({
   badgeWarning: { backgroundColor: 'rgba(146,64,14,.08)' },
   badgeDanger: { backgroundColor: 'rgba(185,28,28,.08)' },
   badgeMuted: { backgroundColor: CoachColors.surfaceMuted },
-  badgeText: { fontFamily: 'monospace', fontSize: 10, lineHeight: 13, fontWeight: '700', textTransform: 'uppercase' },
+  badgeText: { fontSize: 10, lineHeight: 13, textTransform: 'uppercase', ...CoachTypography.inter600 },
   badgeAccentText: { color: CoachColors.accentText },
   badgeWarningText: { color: CoachColors.warning },
   badgeDangerText: { color: CoachColors.danger },

@@ -1,4 +1,4 @@
--- Development-only sample data for SetForge.
+-- Development-only sample data for Spotter.
 -- Run schema.sql first, then run this file in the setforge_db database.
 
 BEGIN;
@@ -6,9 +6,9 @@ BEGIN;
 -- Development users
 INSERT INTO users (email, display_name, account_type)
 VALUES
-    ('alex.trainer@setforge.dev', 'Alex Trainer', 'PERSONAL_TRAINER'),
-    ('maria@setforge.dev', 'Maria Individual', 'INDIVIDUAL'),
-    ('nikos@setforge.dev', 'Nikos Individual', 'INDIVIDUAL')
+    ('alex.trainer@spotterapp.gr', 'Alex Trainer', 'PERSONAL_TRAINER'),
+    ('maria@spotterapp.gr', 'Maria Individual', 'INDIVIDUAL'),
+    ('nikos@spotterapp.gr', 'Nikos Individual', 'INDIVIDUAL')
 ON CONFLICT (email) DO UPDATE
 SET display_name = EXCLUDED.display_name,
     account_type = EXCLUDED.account_type,
@@ -28,10 +28,10 @@ SELECT
     CURRENT_TIMESTAMP
 FROM users trainer
 CROSS JOIN users client
-WHERE trainer.email = 'alex.trainer@setforge.dev'
+WHERE trainer.email = 'alex.trainer@spotterapp.gr'
   AND client.email IN (
-      'maria@setforge.dev',
-      'nikos@setforge.dev'
+      'maria@spotterapp.gr',
+      'nikos@spotterapp.gr'
   )
   AND NOT EXISTS (
       SELECT 1
@@ -155,7 +155,7 @@ SELECT
         WHERE existing.owner_id = trainer.id
     ), 0)
 FROM users trainer
-WHERE trainer.email = 'alex.trainer@setforge.dev'
+WHERE trainer.email = 'alex.trainer@spotterapp.gr'
   AND NOT EXISTS (
       SELECT 1
       FROM workout_templates template
@@ -187,7 +187,7 @@ JOIN (
     ON TRUE
 JOIN exercises exercise
     ON exercise.name = exercise_data.exercise_name
-WHERE trainer.email = 'alex.trainer@setforge.dev'
+WHERE trainer.email = 'alex.trainer@spotterapp.gr'
   AND template.name = 'Beginner Full Body'
   AND NOT EXISTS (
       SELECT 1
@@ -223,7 +223,7 @@ CROSS JOIN (
         (1, 'NORMAL', 8, 40.00::NUMERIC, 90),
         (2, 'NORMAL', 8, 40.00::NUMERIC, 90)
 ) AS set_data(position, set_type, target_reps, target_weight, rest_seconds)
-WHERE trainer.email = 'alex.trainer@setforge.dev'
+WHERE trainer.email = 'alex.trainer@spotterapp.gr'
   AND template.name = 'Beginner Full Body'
   AND NOT EXISTS (
       SELECT 1
@@ -244,7 +244,7 @@ JOIN workout_templates template
 JOIN users trainer
     ON trainer.id = template.owner_id
 WHERE template_set.template_exercise_id = template_exercise.id
-  AND trainer.email = 'alex.trainer@setforge.dev'
+  AND trainer.email = 'alex.trainer@spotterapp.gr'
   AND template.name = 'Beginner Full Body';
 
 -- One completed workout created from the development template
@@ -269,8 +269,8 @@ FROM users trainee
 CROSS JOIN workout_templates template
 JOIN users trainer
     ON trainer.id = template.owner_id
-WHERE trainee.email = 'maria@setforge.dev'
-  AND trainer.email = 'alex.trainer@setforge.dev'
+WHERE trainee.email = 'maria@spotterapp.gr'
+  AND trainer.email = 'alex.trainer@spotterapp.gr'
   AND template.name = 'Beginner Full Body'
   AND NOT EXISTS (
       SELECT 1
@@ -299,7 +299,7 @@ JOIN users trainee
     ON trainee.id = session.user_id
 JOIN workout_template_exercises template_exercise
     ON template_exercise.workout_template_id = session.source_template_id
-WHERE trainee.email = 'maria@setforge.dev'
+WHERE trainee.email = 'maria@spotterapp.gr'
   AND session.name = 'Beginner Full Body - Sample Session'
   AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
   AND NOT EXISTS (
@@ -346,7 +346,7 @@ JOIN users trainee
     ON trainee.id = session.user_id
 JOIN workout_template_sets template_set
     ON template_set.template_exercise_id = session_exercise.source_template_exercise_id
-WHERE trainee.email = 'maria@setforge.dev'
+WHERE trainee.email = 'maria@spotterapp.gr'
   AND session.name = 'Beginner Full Body - Sample Session'
   AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
   AND NOT EXISTS (
@@ -367,7 +367,7 @@ WHERE workout_set.source_template_set_id = template_set.id
   AND session_exercise.id = workout_set.session_exercise_id
   AND session.id = session_exercise.workout_session_id
   AND trainee.id = session.user_id
-  AND trainee.email = 'maria@setforge.dev'
+  AND trainee.email = 'maria@spotterapp.gr'
   AND session.name = 'Beginner Full Body - Sample Session'
   AND session.started_at = '2026-09-14 18:00:00+03'::TIMESTAMPTZ
   AND workout_set.rest_seconds IS DISTINCT FROM template_set.rest_seconds;

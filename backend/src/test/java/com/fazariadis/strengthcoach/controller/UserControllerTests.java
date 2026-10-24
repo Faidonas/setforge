@@ -39,7 +39,7 @@ class UserControllerTests {
 		when(authenticatedUserService.resolve(null)).thenReturn(User.builder().id(1L).build());
 		when(userService.getUser(1L)).thenReturn(UserResponse.builder()
 				.id(1L)
-				.email("alex.trainer@setforge.dev")
+				.email("alex.trainer@spotterapp.gr")
 				.displayName("Alex Trainer")
 				.accountType(AccountType.PERSONAL_TRAINER)
 				.onboardingCompleted(true)
@@ -49,7 +49,7 @@ class UserControllerTests {
 		mockMvc.perform(get("/api/users/me"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(1))
-				.andExpect(jsonPath("$.email").value("alex.trainer@setforge.dev"))
+				.andExpect(jsonPath("$.email").value("alex.trainer@spotterapp.gr"))
 				.andExpect(jsonPath("$.displayName").value("Alex Trainer"))
 				.andExpect(jsonPath("$.accountType").value("PERSONAL_TRAINER"))
 				.andExpect(jsonPath("$.onboardingCompleted").value(true));

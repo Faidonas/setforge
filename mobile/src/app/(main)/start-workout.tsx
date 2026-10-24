@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -39,7 +40,9 @@ export default function StartWorkoutScreen() {
   const router = useRouter();
   const activeWorkout = useActiveWorkout();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [templateGridVersion, setTemplateGridVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplate | null>(null);
   const [actionTemplate, setActionTemplate] = useState<WorkoutTemplate | null>(null);
@@ -99,16 +102,20 @@ export default function StartWorkoutScreen() {
     activeWorkout.expand();
   };
 
-  const loadTemplates = useCallback(async () => {
-    setIsLoading(true);
+  const loadTemplates = useCallback(async (refreshing = false) => {
+    if (refreshing) setIsRefreshing(true);
+    else setIsLoading(true);
     setError(null);
 
     try {
-      setTemplates(await getWorkoutTemplates());
+      const loadedTemplates = await getWorkoutTemplates();
+      setTemplates(loadedTemplates);
+      setTemplateGridVersion((version) => version + 1);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load workout templates.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -192,37 +199,26 @@ export default function StartWorkoutScreen() {
     }
   };
 
-  useEffect(() => {
-    let isCurrent = true;
-
-    getWorkoutTemplates()
-      .then((loadedTemplates) => {
-        if (isCurrent) {
-          setTemplates(loadedTemplates);
-        }
-      })
-      .catch((loadError: unknown) => {
-        if (isCurrent) {
-          setError(
-            loadError instanceof Error ? loadError.message : 'Could not load workout templates.',
-          );
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (activeWorkout.dataRevision >= 0) void loadTemplates();
+    }, [activeWorkout.dataRevision, loadTemplates]),
+  );
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              colors={[SetForgeColors.accent]}
+              onRefresh={() => void loadTemplates(true)}
+              refreshing={isRefreshing}
+              tintColor={SetForgeColors.accent}
+            />
+          }
+          showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <Text style={styles.title}>Start Workout</Text>
           </View>
@@ -260,6 +256,7 @@ export default function StartWorkoutScreen() {
           {templates.length > 0 ? (
             <ReorderableTemplateGrid
               data={templates}
+              key={templateGridVersion}
               keyExtractor={templateKeyExtractor}
               onReorder={reorderTemplates}
               renderItem={(item) => (

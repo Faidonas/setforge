@@ -1,6 +1,8 @@
-.expoLogoBackground {
-  background-image: linear-gradient(180deg, #3c9ffe, #0274df);
-  border-radius: 40px;
+.spotterLogoBackground {
+  box-sizing: border-box;
+  background: #09090b;
+  border: 1px solid #27272a;
+  border-radius: 32px;
   width: 128px;
   height: 128px;
 }

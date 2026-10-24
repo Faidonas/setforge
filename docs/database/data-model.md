@@ -1,6 +1,6 @@
-# SetForge Data Model
+# Spotter Data Model
 
-This document describes the current SetForge database model, the purpose of each entity, and the
+This document describes the current Spotter database model, the purpose of each entity, and the
 rules that connect them. Update it whenever an entity, relationship, or database constraint
 changes.
 
@@ -149,7 +149,7 @@ erDiagram
 
 Database table: `users`
 
-A user is an account that can use SetForge. Both account types use the same table so shared
+A user is an account that can use Spotter. Both account types use the same table so shared
 features, such as owning a workout template or logging a workout, do not require duplicate models.
 
 `account_type` supports:
@@ -159,7 +159,7 @@ features, such as owning a workout template or logging a workout, do not require
 - `INDIVIDUAL`
 
 The email address uniquely identifies an account. `auth_subject` stores the immutable Supabase
-user ID from the verified JWT. On first sign-in, SetForge links an existing local user by email or
+user ID from the verified JWT. On first sign-in, Spotter links an existing local user by email or
 creates a local `INDIVIDUAL` profile. The column remains nullable while development users are
 migrated, and its unique index prevents two profiles from linking to the same identity.
 
@@ -207,12 +207,12 @@ A single exercise can be referenced by many workout templates.
 
 `catalog_visible` controls whether an exercise appears in the exercise library and exercise pickers.
 Hidden exercises are retained so existing templates and workout history never lose their references,
-and they remain available through direct lookup by ID. Exercises created inside SetForge are visible
+and they remain available through direct lookup by ID. Exercises created inside Spotter are visible
 by default.
 
 The current practice catalogue comes from `hasaneyldrm/exercises-dataset`. Its data and instruction
 text use the MIT licence. Its 180x180 thumbnails and GIFs remain the property of GymVisual and are
-kept only for local learning. They must be licensed or replaced before SetForge is distributed.
+kept only for local learning. They must be licensed or replaced before Spotter is distributed.
 
 `exercise_type` supports:
 

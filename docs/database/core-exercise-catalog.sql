@@ -1,4 +1,4 @@
--- SetForge core exercise catalogue.
+-- Spotter core exercise catalogue.
 -- This is a reviewed, Strong-inspired subset of the imported practice dataset.
 -- Run after exercise-catalog-data.sql. Safe to rerun.
 
@@ -234,7 +234,7 @@ WHERE source_name = 'hasaneyldrm/exercises-dataset'
     '0808' -- suspended row
   );
 
--- Exercises created directly in SetForge remain available.
+-- Exercises created directly in Spotter remain available.
 UPDATE exercises
 SET catalog_visible = TRUE
 WHERE source_name IS NULL;

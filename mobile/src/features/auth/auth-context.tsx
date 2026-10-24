@@ -28,8 +28,8 @@ function getAuthRedirectUrl() {
   if (Platform.OS === 'web') return window.location.origin;
   if (Constants.appOwnership === 'expo') return makeRedirectUri({ path: 'auth/callback' });
   return makeRedirectUri({
-    native: 'setforge://auth/callback',
-    scheme: 'setforge',
+    native: 'spotter://auth/callback',
+    scheme: 'spotter',
     path: 'auth/callback',
   });
 }
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     async signInWithGoogle() {
       if (Platform.OS !== 'web' && Constants.appOwnership === 'expo') {
-        throw new Error('Google sign-in cannot finish inside Expo Go. Use the web app on localhost:8081 or install a SetForge development build.');
+        throw new Error('Google sign-in cannot finish inside Expo Go. Use the web app on localhost:8081 or install a Spotter development build.');
       }
       const redirectTo = getAuthRedirectUrl();
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (errorCode) throw new Error(errorCode);
         const accessToken = params.access_token;
         const refreshToken = params.refresh_token;
-        if (!accessToken || !refreshToken) throw new Error('Google did not return a valid SetForge session.');
+        if (!accessToken || !refreshToken) throw new Error('Google did not return a valid Spotter session.');
         const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (sessionError) throw sessionError;
       }

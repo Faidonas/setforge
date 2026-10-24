@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SpotterLogo } from '@/components/spotter-logo';
 import { SetForgeColors, SetForgeSpacing } from '@/constants/setforge-theme';
 import { canAccessCoachDashboard, getInitialWorkspaceRoute } from '@/constants/coach-access';
 import { RoleOptionCard } from '@/features/onboarding/components/role-option-card';
@@ -84,7 +85,7 @@ export default function WelcomeRoleSelectionScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.screen}>
         <View style={styles.brandArea}>
-          <Text style={styles.logo}>FORGE</Text>
+          <SpotterLogo width={232} />
           <Text style={styles.tagline}>PLAN. PERFORM. PROGRESS.</Text>
         </View>
 
@@ -148,13 +149,6 @@ const styles = StyleSheet.create({
     gap: SetForgeSpacing.sm,
     paddingHorizontal: SetForgeSpacing.lg,
     paddingTop: 74,
-  },
-  logo: {
-    color: SetForgeColors.textPrimary,
-    fontSize: 36,
-    lineHeight: 43,
-    fontWeight: '900',
-    letterSpacing: -1.2,
   },
   tagline: {
     color: SetForgeColors.accent,

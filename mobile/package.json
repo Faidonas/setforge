@@ -1,8 +1,10 @@
 {
-  "name": "mobile",
+  "name": "spotter",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/sora": "^0.4.2",
     "@expo/ui": "~57.0.18",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.117.3",
@@ -39,6 +41,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "brand:assets": "node ./scripts/generate-brand-assets.cjs",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",

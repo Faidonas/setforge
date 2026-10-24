@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   SectionList,
   StyleSheet,
   Text,
@@ -28,10 +29,12 @@ export default function ExerciseLibraryScreen() {
   const [query, setQuery] = useState('');
   const [bodyPart, setBodyPart] = useState<ExerciseBodyPart>('Any Body Part');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadExercises = useCallback(async () => {
-    setIsLoading(true);
+  const loadExercises = useCallback(async (refreshing = false) => {
+    if (refreshing) setIsRefreshing(true);
+    else setIsLoading(true);
     setError(null);
 
     try {
@@ -40,6 +43,7 @@ export default function ExerciseLibraryScreen() {
       setError(loadError instanceof Error ? loadError.message : 'Could not load exercises.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -116,6 +120,14 @@ export default function ExerciseLibraryScreen() {
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             keyExtractor={(exercise) => exercise.id.toString()}
             keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl
+                colors={[SetForgeColors.accent]}
+                onRefresh={() => void loadExercises(true)}
+                refreshing={isRefreshing}
+                tintColor={SetForgeColors.accent}
+              />
+            }
             removeClippedSubviews={false}
             stickySectionHeadersEnabled
             ListEmptyComponent={

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
+import { SpotterLogo } from '@/components/spotter-logo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetForgeColors } from '@/constants/setforge-theme';
@@ -70,7 +71,7 @@ export default function InitialSetupScreen() {
   async function saveProfile() {
     const normalizedName = displayName.trim();
     if (!normalizedName) {
-      setError('Enter the name you want to use in SetForge.');
+      setError('Enter the name you want to use in Spotter.');
       return;
     }
     setIsSaving(true);
@@ -107,7 +108,10 @@ export default function InitialSetupScreen() {
         style={styles.keyboardArea}>
         <View style={styles.screen}>
           <View style={styles.header}>
-            <Text style={styles.step}>STEP 1 OF 1</Text>
+            <View style={styles.brandRow}>
+              <SpotterLogo width={108} />
+              <Text style={styles.step}>STEP 1 OF 1</Text>
+            </View>
             <Text style={styles.title}>Profile Setup</Text>
             <Text style={styles.subtitle}>Optimize metrics for raw performance metrics.</Text>
           </View>
@@ -255,6 +259,7 @@ const styles = StyleSheet.create({
   },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { gap: 8, paddingHorizontal: 24, paddingTop: 24 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   step: { color: SetForgeColors.accent, fontFamily: 'monospace', fontSize: 11 },
   title: { color: SetForgeColors.textPrimary, fontSize: 24, lineHeight: 31, fontWeight: '800' },
   subtitle: { color: SetForgeColors.textSecondary, fontSize: 14, lineHeight: 18 },

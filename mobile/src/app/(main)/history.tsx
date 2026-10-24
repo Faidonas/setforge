@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,14 +39,11 @@ export default function WorkoutHistoryScreen() {
     finally { setIsLoading(false); setIsRefreshing(false); }
   }, []);
 
-  useEffect(() => {
-    let current = true;
-    getWorkoutHistory()
-      .then((history) => { if (current) setWorkouts(history); })
-      .catch((loadError: unknown) => { if (current) setError(loadError instanceof Error ? loadError.message : 'Could not load workout history.'); })
-      .finally(() => { if (current) setIsLoading(false); });
-    return () => { current = false; };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (activeWorkout.dataRevision >= 0) void loadHistory();
+    }, [activeWorkout.dataRevision, loadHistory]),
+  );
 
   const deleteSavedWorkout = (workout: WorkoutSession) => {
     setActionWorkout(null);

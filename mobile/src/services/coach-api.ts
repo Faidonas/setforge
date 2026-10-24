@@ -7,11 +7,11 @@ import type {
 } from '@/models/coach';
 import type { UserProfile } from '@/models/user';
 import type { CreateWorkoutTemplateRequest, WorkoutTemplate } from '@/models/workout-template';
-import { apiJson } from '@/services/api-client';
+import { apiFetch, apiJson } from '@/services/api-client';
 
 function asObject<T>(value: unknown, label: string): T {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`SetForge returned an unexpected ${label} response.`);
+    throw new Error(`Spotter returned an unexpected ${label} response.`);
   }
   return value as T;
 }
@@ -22,7 +22,7 @@ export async function getCoachDashboard(): Promise<CoachDashboard> {
 
 export async function getCoachClients(): Promise<CoachClientSummary[]> {
   const value = await apiJson('/api/coach/clients');
-  if (!Array.isArray(value)) throw new Error('SetForge returned an unexpected client list.');
+  if (!Array.isArray(value)) throw new Error('Spotter returned an unexpected client list.');
   return value as CoachClientSummary[];
 }
 
@@ -32,7 +32,7 @@ export async function getCoachClient(clientId: number): Promise<CoachClientDetai
 
 export async function getCoachTemplates(): Promise<CoachWorkoutTemplate[]> {
   const value = await apiJson('/api/coach/templates');
-  if (!Array.isArray(value)) throw new Error('SetForge returned an unexpected coach template list.');
+  if (!Array.isArray(value)) throw new Error('Spotter returned an unexpected coach template list.');
   return value as CoachWorkoutTemplate[];
 }
 
@@ -46,6 +46,18 @@ export async function createCoachWorkoutTemplate(
     }),
     'workout template',
   );
+}
+
+export async function duplicateCoachWorkoutTemplate(templateId: number): Promise<WorkoutTemplate> {
+  return asObject<WorkoutTemplate>(
+    await apiJson(`/api/coach/templates/${templateId}/duplicate`, { method: 'POST' }),
+    'duplicated workout template',
+  );
+}
+
+export async function deleteCoachWorkoutTemplate(templateId: number) {
+  const response = await apiFetch(`/api/workout-templates/${templateId}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error(`Could not delete template (${response.status}).`);
 }
 
 export async function assignCoachWorkoutTemplate(templateId: number, userId: number) {
@@ -72,7 +84,7 @@ export async function createCoachUser(input: {
 
 export async function getAdminAssignableCoaches(): Promise<UserProfile[]> {
   const value = await apiJson('/api/admin/coaching-relationships/coaches');
-  if (!Array.isArray(value)) throw new Error('SetForge returned an unexpected coach list.');
+  if (!Array.isArray(value)) throw new Error('Spotter returned an unexpected coach list.');
   return value as UserProfile[];
 }
 

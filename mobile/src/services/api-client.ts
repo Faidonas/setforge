@@ -18,7 +18,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   try {
     return await fetch(`${apiUrl.replace(/\/$/, '')}${path}`, { ...options, headers });
   } catch {
-    throw new Error('Could not connect to SetForge. Check your network and API URL.');
+    throw new Error('Could not connect to Spotter. Check your network and API URL.');
   }
 }
 
@@ -26,7 +26,7 @@ export async function apiJson(path: string, options?: RequestInit): Promise<unkn
   const response = await apiFetch(path, options);
   if (!response.ok) {
     const details = await response.text().catch(() => '');
-    throw new Error(`SetForge returned ${response.status}${details ? `: ${details}` : ''}`);
+    throw new Error(`Spotter returned ${response.status}${details ? `: ${details}` : ''}`);
   }
   return response.status === 204 ? null : response.json();
 }

@@ -11,8 +11,8 @@ public class OpenApiConfiguration {
 	@Bean
 	OpenAPI setForgeOpenApi() {
 		return new OpenAPI().info(new Info()
-				.title("SetForge API")
-				.description("REST API for the SetForge strength coaching application")
+				.title("Spotter API")
+				.description("REST API for the Spotter strength coaching application")
 				.version("v1"));
 	}
 }

@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
+import { SpotterLogo } from '@/components/spotter-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
@@ -12,6 +13,7 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TabTwoScreen() {
+  const scheme = useColorScheme();
   const safeAreaInsets = useSafeAreaInsets();
   const insets = {
     ...safeAreaInsets,
@@ -93,7 +95,7 @@ export default function TabTwoScreen() {
               <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
               screen densities.
             </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
+            <SpotterLogo width={80} markOnly appearance={scheme === 'dark' ? 'dark' : 'light'} style={{ alignSelf: 'center' }} />
             <ExternalLink href="https://reactnative.dev/docs/images">
               <ThemedText type="linkPrimary">Learn more</ThemedText>
             </ExternalLink>
@@ -171,10 +173,5 @@ const styles = StyleSheet.create({
     aspectRatio: 296 / 171,
     borderRadius: Spacing.three,
     marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
   },
 });

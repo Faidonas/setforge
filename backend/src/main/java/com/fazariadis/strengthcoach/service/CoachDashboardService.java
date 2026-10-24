@@ -162,6 +162,12 @@ public class CoachDashboardService {
 	}
 
 	@Transactional
+	public WorkoutTemplateResponse duplicateTemplate(User coach, Long templateId) {
+		requireCoach(coach);
+		return workoutTemplateService.duplicateUnassigned(templateId, coach.getId());
+	}
+
+	@Transactional
 	public void assignTemplate(User coach, Long templateId, Long userId) {
 		requireCoach(coach);
 		requireAssignableUser(coach, userId);

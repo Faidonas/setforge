@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 
 import { CoachColors } from '@/constants/setforge-theme';
+import { CoachTypography } from '@/features/coach/coach-typography';
 import { ActionButton, HoverPressable, PageHeading, Panel, StatusBadge, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
 import { useCoachResource } from '@/features/coach/use-coach-resource';
 import type { AdminCoachingRelationship } from '@/models/coach';
@@ -50,7 +51,7 @@ export default function AssignClientScreen() {
     <View style={[coachStyles.page, isCompact && coachStyles.pageCompact]}>
       <PageHeading
         title="Assign client"
-        subtitle="Connect an existing Supabase individual account to a SetForge coach."
+        subtitle="Connect an existing Supabase individual account to a Spotter coach."
         actions={<ActionButton label="Back to dashboard" secondary onPress={() => router.back()} />}
       />
 
@@ -68,7 +69,7 @@ export default function AssignClientScreen() {
             value={clientEmail}
           />
           <Text style={styles.help}>
-            The account must already exist in Supabase. SetForge will import it automatically if the client has not logged in yet.
+            The account must already exist in Supabase. Spotter will import it automatically if the client has not logged in yet.
           </Text>
 
           <Text style={styles.label}>COACH</Text>
@@ -154,9 +155,9 @@ const styles = StyleSheet.create({
   formCompact: { width: '100%', padding: 18 },
   rail: { flex: 1 },
   railCompact: { width: '100%', flex: 0 },
-  label: { marginTop: 4, color: CoachColors.textSecondary, fontFamily: 'monospace', fontSize: 10 },
-  input: { height: 48, paddingHorizontal: 14, borderWidth: 1, borderColor: CoachColors.inputBorder, borderRadius: 6, color: CoachColors.textPrimary, backgroundColor: CoachColors.surfaceMuted, fontSize: 14, outlineStyle: 'none' } as never,
-  help: { color: CoachColors.textSecondary, fontSize: 11, lineHeight: 18 },
+  label: { ...CoachTypography.inter600, marginTop: 4, color: CoachColors.textSecondary, fontSize: 10 },
+  input: { ...CoachTypography.inter400, height: 48, paddingHorizontal: 14, borderWidth: 1, borderColor: CoachColors.inputBorder, borderRadius: 6, color: CoachColors.textPrimary, backgroundColor: CoachColors.surfaceMuted, fontSize: 14, outlineStyle: 'none' } as never,
+  help: { ...CoachTypography.inter400, color: CoachColors.textSecondary, fontSize: 11, lineHeight: 18 },
   coachList: { gap: 8 },
   coachOption: { minHeight: 64, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: CoachColors.border, borderRadius: 7, backgroundColor: CoachColors.canvas },
   coachOptionHovered: { borderColor: CoachColors.accentText, backgroundColor: CoachColors.surfaceMuted, transform: [{ translateX: 3 }] },
@@ -165,12 +166,12 @@ const styles = StyleSheet.create({
   radioSelected: { borderColor: CoachColors.accentText },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: CoachColors.accentText },
   coachCopy: { flex: 1, minWidth: 0 },
-  coachName: { color: CoachColors.textPrimary, fontSize: 13, fontWeight: '800' },
-  coachEmail: { marginTop: 3, color: CoachColors.textSecondary, fontSize: 10 },
-  error: { color: CoachColors.danger, fontSize: 12, lineHeight: 18 },
+  coachName: { ...CoachTypography.sora600, color: CoachColors.textPrimary, fontSize: 13 },
+  coachEmail: { ...CoachTypography.inter400, marginTop: 3, color: CoachColors.textSecondary, fontSize: 10 },
+  error: { ...CoachTypography.inter400, color: CoachColors.danger, fontSize: 12, lineHeight: 18 },
   successPanel: { padding: 22, gap: 11, borderColor: CoachColors.accentText },
-  successTitle: { color: CoachColors.textPrimary, fontSize: 18, fontWeight: '800' },
-  relationship: { color: CoachColors.accentText, fontSize: 13, fontWeight: '800' },
+  successTitle: { ...CoachTypography.sora700, color: CoachColors.textPrimary, fontSize: 18, letterSpacing: -0.36 },
+  relationship: { ...CoachTypography.sora600, color: CoachColors.accentText, fontSize: 13 },
   infoPanel: { padding: 22, gap: 12 },
   pressed: { opacity: 0.7 },
 });

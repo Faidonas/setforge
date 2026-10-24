@@ -118,11 +118,58 @@ public class WorkoutTemplateService {
 
 	@Transactional(readOnly = true)
 	public WorkoutTemplateResponse getById(Long templateId, Long ownerId) {
+		WorkoutTemplate template = findTemplate(templateId);
+		if (template.getOwner().getId().equals(ownerId)) {
+			return loadResponse(template);
+		}
 		WorkoutTemplateAssignment assignment = workoutTemplateAssignmentRepository
 				.findByWorkoutTemplate_IdAndUser_Id(templateId, ownerId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Workout template " + templateId + " was not found"));
 		return loadAssignedResponse(assignment, ownerId);
+	}
+
+	@Transactional
+	public WorkoutTemplateResponse duplicateUnassigned(Long templateId, Long ownerId) {
+		WorkoutTemplate source = findTemplateForOwner(templateId, ownerId);
+		List<WorkoutTemplateExercise> sourceExercises =
+				workoutTemplateExerciseRepository.findAllByWorkoutTemplate_IdOrderByPositionAsc(templateId);
+		List<Long> sourceExerciseIds = sourceExercises.stream()
+				.map(WorkoutTemplateExercise::getId)
+				.toList();
+		Map<Long, List<WorkoutTemplateSet>> setsByExerciseId = sourceExerciseIds.isEmpty()
+				? Map.of()
+				: workoutTemplateSetRepository
+						.findAllByTemplateExercise_IdInOrderByTemplateExercise_IdAscPositionAsc(sourceExerciseIds)
+						.stream()
+						.collect(Collectors.groupingBy(
+								set -> set.getTemplateExercise().getId(),
+								HashMap::new,
+								Collectors.toList()));
+
+		CreateWorkoutTemplateRequest request = CreateWorkoutTemplateRequest.builder()
+				.ownerId(ownerId)
+				.name(nextCopyName(ownerId, source.getName()))
+				.description(source.getDescription())
+				.exercises(sourceExercises.stream()
+						.map(sourceExercise -> WorkoutTemplateExerciseRequest.builder()
+								.exerciseId(sourceExercise.getExercise().getId())
+								.notes(sourceExercise.getNotes())
+								.sets(setsByExerciseId
+										.getOrDefault(sourceExercise.getId(), List.of())
+										.stream()
+										.map(set -> WorkoutTemplateSetRequest.builder()
+												.setType(set.getSetType())
+												.targetReps(set.getTargetReps())
+												.targetWeight(set.getTargetWeight())
+												.targetTimeSeconds(set.getTargetTimeSeconds())
+												.restSeconds(set.getRestSeconds())
+												.build())
+										.toList())
+								.build())
+						.toList())
+				.build();
+		return createUnassigned(request);
 	}
 
 	@Transactional
@@ -251,6 +298,19 @@ public class WorkoutTemplateService {
 		if (alreadyExists) {
 			throw new InvalidRequestException(
 					"Workout template name '" + name + "' is already in use for this user");
+		}
+	}
+
+	private String nextCopyName(Long ownerId, String sourceName) {
+		int copyNumber = 1;
+		while (true) {
+			String suffix = copyNumber == 1 ? " Copy" : " Copy " + copyNumber;
+			String base = sourceName.substring(0, Math.min(sourceName.length(), 100 - suffix.length())).stripTrailing();
+			String candidate = base + suffix;
+			if (!workoutTemplateRepository.existsByOwner_IdAndNameIgnoreCase(ownerId, candidate)) {
+				return candidate;
+			}
+			copyNumber++;
 		}
 	}
 

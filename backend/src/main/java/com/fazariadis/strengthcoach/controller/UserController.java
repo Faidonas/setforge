@@ -29,7 +29,7 @@ public class UserController {
 	private final AuthenticatedUserService authenticatedUserService;
 
 	@GetMapping("/me")
-	@Operation(summary = "Get a user profile", description = "Returns one SetForge user profile.")
+	@Operation(summary = "Get a user profile", description = "Returns one Spotter user profile.")
 	@ApiResponse(responseCode = "200", description = "User returned successfully")
 	@ApiResponse(responseCode = "404", description = "User not found")
 	public UserResponse getUser(@AuthenticationPrincipal Jwt jwt) {
@@ -37,7 +37,7 @@ public class UserController {
 	}
 
 	@PutMapping("/me/account-type")
-	@Operation(summary = "Update the authenticated user's SetForge account type")
+	@Operation(summary = "Update the authenticated user's Spotter account type")
 	public UserResponse updateAccountType(
 			@AuthenticationPrincipal Jwt jwt,
 			@Valid @RequestBody UpdateAccountTypeRequest request) {

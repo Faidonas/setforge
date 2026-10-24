@@ -6,6 +6,7 @@ import { NonCredentialTextInput } from '@/components/non-credential-text-input';
 import { CoachColors } from '@/constants/setforge-theme';
 import { useAuth } from '@/features/auth/auth-context';
 import { HoverPressable, PageHeading, Panel, coachStyles, useCoachLayout } from '@/features/coach/coach-ui';
+import { CoachTypography } from '@/features/coach/coach-typography';
 
 export default function CoachSettingsScreen() {
   const auth = useAuth();
@@ -51,7 +52,7 @@ export default function CoachSettingsScreen() {
     <View style={[coachStyles.page, isCompact && coachStyles.pageCompact]}>
       <PageHeading
         title="Settings"
-        subtitle="Review your SetForge identity and manage your sign-in password."
+        subtitle="Review your Spotter identity and manage your sign-in password."
       />
       <View style={[styles.columns, isCompact && styles.columnsCompact]}>
         <Panel style={[styles.identityPanel, isCompact && styles.panelCompact]}>
@@ -113,17 +114,17 @@ const styles = StyleSheet.create({
   identityPanel: { width: '42%', padding: 24, gap: 16 },
   passwordPanel: { flex: 1, padding: 24, gap: 12 },
   panelCompact: { width: '100%', padding: 18 },
-  sectionLabel: { color: CoachColors.textPrimary, fontFamily: 'monospace', fontSize: 10, fontWeight: '800' },
+  sectionLabel: { color: CoachColors.textPrimary, fontSize: 10, ...CoachTypography.inter600 },
   identityRow: { gap: 5 },
-  fieldLabel: { color: CoachColors.textSecondary, fontSize: 10 },
-  fieldValue: { color: CoachColors.textPrimary, fontSize: 13, fontWeight: '700' },
+  fieldLabel: { color: CoachColors.textSecondary, fontSize: 10, ...CoachTypography.inter500 },
+  fieldValue: { color: CoachColors.textPrimary, fontSize: 13, ...CoachTypography.inter600 },
   divider: { height: 1, backgroundColor: CoachColors.border },
-  help: { color: CoachColors.textSecondary, fontSize: 11, lineHeight: 17 },
-  input: { height: 48, paddingHorizontal: 14, borderWidth: 1, borderColor: CoachColors.inputBorder, borderRadius: 6, color: CoachColors.textPrimary, backgroundColor: CoachColors.surfaceMuted, fontSize: 13, outlineStyle: 'none' } as never,
-  message: { color: CoachColors.danger, fontSize: 11, lineHeight: 17 },
+  help: { color: CoachColors.textSecondary, fontSize: 11, lineHeight: 17, ...CoachTypography.inter400 },
+  input: { height: 48, paddingHorizontal: 14, borderWidth: 1, borderColor: CoachColors.inputBorder, borderRadius: 6, color: CoachColors.textPrimary, backgroundColor: CoachColors.surfaceMuted, fontSize: 13, outlineStyle: 'none', ...CoachTypography.inter400 } as never,
+  message: { color: CoachColors.danger, fontSize: 11, lineHeight: 17, ...CoachTypography.inter400 },
   success: { color: CoachColors.accentText },
   button: { height: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 7, backgroundColor: CoachColors.accent },
   buttonHovered: { transform: [{ translateY: -2 }], boxShadow: '0 9px 22px rgba(0, 185, 198, 0.18)' },
-  buttonLabel: { color: CoachColors.buttonText, fontSize: 11, fontWeight: '900' },
+  buttonLabel: { color: CoachColors.buttonText, fontSize: 11, ...CoachTypography.inter600 },
   pressed: { opacity: 0.72 },
 });

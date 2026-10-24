@@ -64,6 +64,7 @@ type ActiveWorkoutContextValue = {
   isHydrating: boolean;
   hydrationError: string | null;
   refreshActiveWorkout: () => Promise<void>;
+  dataRevision: number;
 };
 
 const ActiveWorkoutContext = createContext<ActiveWorkoutContextValue | null>(null);
@@ -108,6 +109,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
   const [hydrationError, setHydrationError] = useState<string | null>(null);
+  const [dataRevision, setDataRevision] = useState(0);
 
   const loadSession = useCallback((loadedSession: WorkoutSession) => {
     setSession(loadedSession);
@@ -287,6 +289,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
     setIsExpanded(false);
     setSession(null);
     setExercises([]);
+    setDataRevision((revision) => revision + 1);
   }, []);
 
   const expand = useCallback(() => setIsExpanded(true), []);
@@ -311,6 +314,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
       isHydrating,
       hydrationError,
       refreshActiveWorkout,
+      dataRevision,
     }),
     [
       addExercises,
@@ -328,6 +332,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
       isHydrating,
       hydrationError,
       refreshActiveWorkout,
+      dataRevision,
       toggleSet,
       updateSet,
     ],

@@ -1,4 +1,17 @@
-# SetForge mobile and web client
+# Spotter mobile and web client
+
+## Brand assets
+
+The approved single-lifter and barbell logo is used through `src/components/spotter-logo.tsx`.
+Use `appearance="dark"` on dark surfaces (cyan symbol and white wordmark),
+or `appearance="light"` for the monochrome dark artwork. Use `markOnly` for compact placements.
+
+Production PNGs are in `assets/images/spotter/`; `app.json` uses these for iOS, Android
+adaptive and themed icons, the web favicon, and the native splash screen. The approved
+source board and generation prompt are preserved in `assets/brand/`.
+Run `npm run brand:assets` to regenerate the complete asset set without redrawing the logo.
+Native launcher and splash changes require a new app build; Expo Go does not show the
+application's final launcher icon or native splash configuration.
 
 ## Authentication setup
 
@@ -6,7 +19,8 @@ Copy `.env.example` to `.env.local` and set the API URL plus the Supabase projec
 publishable key. In Supabase, disable open sign-ups for the invite-only phase and enable Google
 under Authentication providers. Add the deployed web origin and local Expo web origin to the
 allowed redirect URLs.
-For native builds, also allow `setforge://**` as a redirect URL.
+For native builds, also allow `spotter://**` as a redirect URL. The planned production web origin is
+`https://spotterapp.gr`.
 
 After login, completed trainer and administrator accounts open the coach dashboard when the
 browser viewport is at least 900 pixels wide. On smaller screens they open the training app.
